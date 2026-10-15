@@ -125,15 +125,15 @@ class Importer::RelationalImportTest < ActiveSupport::TestCase
     file&.close!
   end
 
-  test "numbered results replace omitted fields and Feb 29 birthdays use March 1 in non-leap years" do
+  test "numbered results preserve omitted fields and Feb 29 birthdays use March 1 in non-leap years" do
     batch = create_batch
     athlete = Athlete.create!(full_name: "Leap Fiction", date_of_birth: Date.new(1984, 2, 29))
     @event.update!(event_date: Date.new(2026, 2, 28))
     first = Importer::RaceResultWriter.new(batch, athlete, "race_number" => "401", "finish_time" => "01:00:00", "category" => "Open", "overall_position" => "1").write
     second = Importer::RaceResultWriter.new(batch, athlete, "race_number" => "401", "finish_time" => "00:59:00").write
     assert_equal first.id, second.id
-    assert_nil second.category
-    assert_nil second.overall_position
+    assert_equal "Open", second.category
+    assert_equal 1, second.overall_position
     assert_equal 41, second.age_at_race
   end
 end

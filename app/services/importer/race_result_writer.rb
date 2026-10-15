@@ -16,11 +16,24 @@ module Importer
         raise AthleteResolver::IdentityConflict, "Race number already belongs to another athlete"
       end
       result.import_batch ||= @batch
-      result.assign_attributes(athlete: @athlete, finish_time_display: @data["finish_time"].to_s.presence,
+      attributes = { finish_time_display: @data["finish_time"].to_s.presence,
         finish_time_seconds: TimeParser.seconds(@data["finish_time"]), finish_status: @data["finish_status"],
         overall_position: position("overall_position"), category: @data["category"],
         category_position: position("category_position"), gender_position: position("gender_position"),
-        gender: @data["gender"], club: @data["club"], age_at_race: age_at_race)
+        gender: @data["gender"], club: @data["club"], age_at_race: age_at_race }
+      # Numbered corrections replace only supplied values. Blank cells never mean "clear".
+      # Unnumbered results retain their existing per-batch replacement behavior.
+      if number && result.persisted?
+        attributes.select! do |attribute, _value|
+          field = case attribute
+          when :finish_time_display, :finish_time_seconds then "finish_time"
+          when :age_at_race then "date_of_birth"
+          else attribute.to_s
+          end
+          @data.key?(field) && @data[field].present?
+        end
+      end
+      result.assign_attributes(attributes.merge(athlete: @athlete))
       result.save!
       result
     end
