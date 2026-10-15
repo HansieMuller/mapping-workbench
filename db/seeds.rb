@@ -1,5 +1,7 @@
 # Seed only this demo's dedicated local database. The random password stays untracked.
 raise "Seeds are local-only" unless Rails.env.development? || Rails.env.test?
+# db:prepare seeds a new test database too; tests own their contexts and must not overwrite demo credentials.
+return if Rails.env.test?
 user = User.find_or_initialize_by(email: "operator@example.test")
 unless user.persisted?
   password = SecureRandom.base58(24)

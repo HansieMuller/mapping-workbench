@@ -3,6 +3,16 @@ require "test_helper"
 class DomainTest < ActiveSupport::TestCase
   setup { create_context }
 
+  test "test database preparation never seeds demo context or credentials" do
+    path = Rails.root.join("tmp/demo_password")
+    before = File.exist?(path) ? [ File.mtime(path), File.size(path) ] : nil
+    assert_no_difference [ "User.count", "Event.count", "Race.count", "PaperTrail::Version.count" ] do
+      load Rails.root.join("db/seeds.rb")
+    end
+    after = File.exist?(path) ? [ File.mtime(path), File.size(path) ] : nil
+    before ? assert_equal(before, after) : assert_nil(after)
+  end
+
   test "batch context is protected by validation and PostgreSQL" do
     other = Event.create!(name: "Starling Parade", event_date: @event.event_date)
     batch = create_batch
