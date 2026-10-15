@@ -31,7 +31,9 @@ module Importer
       text = @data[key].to_s.strip
       return if text.blank?
       raise InvalidValue, "#{key.humanize} must be a positive whole number" unless text.match?(/\A[1-9]\d*\z/)
-      Integer(text)
+      number = Integer(text)
+      raise InvalidValue, "#{key.humanize} exceeds the supported integer range" if number > 2_147_483_647
+      number
     end
 
     def age_at_race
@@ -39,7 +41,9 @@ module Importer
       return unless birth
       date = @batch.event.event_date
       years = date.year - birth.year
-      date < birth.advance(years: years) ? years - 1 : years
+      # Preserve calendar birthday semantics: a Feb 29 birthday passes on March 1 in a non-leap year.
+      passed = date.month > birth.month || (date.month == birth.month && date.day >= birth.day)
+      passed ? years : years - 1
     end
   end
 end

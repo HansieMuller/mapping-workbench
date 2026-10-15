@@ -107,4 +107,33 @@ class Importer::RelationalImportTest < ActiveSupport::TestCase
       Athlete.transaction(requires_new: true) { Importer::AthleteResolver.new(batch, "full_name" => "Twin Fern", "date_of_birth" => "1990-01-01").resolve }
     end
   end
+  test "oversized positions fail only their row and later rows still commit" do
+    batch = attach_workbook(create_batch, name: "success.xlsx")
+    # Keep the workbook real; map a synthetic malformed numeric cell in a replacement file.
+    file = rewrite_zip(Rails.root.join("test/fixtures/files/success.xlsx"),
+      "xl/worksheets/sheet1.xml" => ->(xml) { xml.sub('<c r="H4"', '<c r="H4"').sub(/(<c r="H4"[^>]*><v>)1(<\/v>)/, "\\12147483648\\2") })
+    batch.source_file.attach(io: File.open(file.path), filename: "overflow.xlsx")
+    batch.update!(status: :queued, total_rows: 8)
+    ImportWorkbookJob.perform_now(batch.id)
+    assert_equal "completed_with_errors", batch.reload.status
+    assert_equal 1, batch.failed_rows
+    assert_equal 5, batch.imported_rows
+    assert_nil Athlete.find_by(id_number: "0000000000001")
+    assert Athlete.find_by(id_number: "0000000000002")
+    assert_match(/integer range/, batch.import_rows.find_by(source_sheet: "Results", source_row_number: 4).error_message)
+  ensure
+    file&.close!
+  end
+
+  test "numbered results replace omitted fields and Feb 29 birthdays follow original calendar rule" do
+    batch = create_batch
+    athlete = Athlete.create!(full_name: "Leap Fiction", date_of_birth: Date.new(1984, 2, 29))
+    @event.update!(event_date: Date.new(2026, 2, 28))
+    first = Importer::RaceResultWriter.new(batch, athlete, "race_number" => "401", "finish_time" => "01:00:00", "category" => "Open", "overall_position" => "1").write
+    second = Importer::RaceResultWriter.new(batch, athlete, "race_number" => "401", "finish_time" => "00:59:00").write
+    assert_equal first.id, second.id
+    assert_nil second.category
+    assert_nil second.overall_position
+    assert_equal 41, second.age_at_race
+  end
 end

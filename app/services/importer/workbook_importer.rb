@@ -9,13 +9,18 @@ module Importer
     # Only the connection holding the batch advisory lock may claim/resume this batch.
     # Terminal row checkpoints and domain writes commit together; counters are derived, never reset.
     def call
-      DatabaseLock.with_batch(@batch.id) do
+      DatabaseLock.with_batch(@batch.id) do |ownership|
+        @ownership = ownership
         @batch.reload
         next unless @batch.queued?
         MappingValidator.validate!(@batch.preview_data, @batch.mapping_config)
-        @batch.update!(status: :processing, claim_token: SecureRandom.uuid,
+        @batch.with_lock("FOR NO KEY UPDATE") do
+          @ownership.verify!
+          @claim_token = SecureRandom.uuid
+          @batch.update!(status: :processing, claim_token: @claim_token,
           attempts: @batch.attempts + 1, started_at: @batch.started_at || Time.current,
           heartbeat_at: Time.current, completed_at: nil, fatal_error: nil)
+        end
         @batch.broadcast_progress!
         WorkbookPreview.open(@batch) do |workbook|
           @batch.preview_data.fetch("sheets").each do |config|
@@ -23,18 +28,24 @@ module Importer
             mapping = @batch.mapping_config.fetch("sheets").fetch(config.fetch("key"))
             ((config.fetch("header_row") + 1)..sheet.last_row.to_i).each do |number|
               process_row(sheet, config, number, mapping)
-              @batch.refresh_counts!
+              with_owned_batch { @batch.refresh_counts! }
               @batch.broadcast_progress!
             end
           end
         end
-        @batch.refresh_counts!
-        @batch.update!(status: @batch.failed_rows.positive? ? :completed_with_errors : :completed, completed_at: Time.current)
+        with_owned_batch do
+          @batch.refresh_counts!
+          @batch.update!(status: @batch.failed_rows.positive? ? :completed_with_errors : :completed, completed_at: Time.current)
+        end
         @batch.broadcast_progress!
+      rescue DatabaseLock::OwnershipLost
+        raise
       rescue StandardError => error
         # Unexpected infrastructure failures stop the job; successful rows remain replay checkpoints.
-        @batch.refresh_counts!
-        @batch.update!(status: :failed, fatal_error: "Import interrupted (#{error.class.name}); inspect local diagnostics and resume.", completed_at: Time.current)
+        with_owned_batch do
+          @batch.refresh_counts!
+          @batch.update!(status: :failed, fatal_error: "Import interrupted (#{error.class.name}); inspect local diagnostics and resume.", completed_at: Time.current)
+        end
         @batch.broadcast_progress!
         raise
       end
@@ -42,7 +53,23 @@ module Importer
 
     private
 
+    # Fence every row and terminal state behind the original backend session and persisted claim.
+    # A batch row lock makes the ownership check and its writes one transaction.
+    def with_owned_batch
+      @ownership.verify!
+      @batch.with_lock("FOR NO KEY UPDATE") do
+        @ownership.verify!
+        valid_claim = @claim_token ? @batch.claim_token == @claim_token && @batch.processing? : @batch.queued?
+        raise DatabaseLock::OwnershipLost, "Worker claim changed" unless valid_claim
+        yield
+      end
+    end
+
     def process_row(sheet, config, number, mapping)
+      with_owned_batch { process_owned_row(sheet, config, number, mapping) }
+    end
+
+    def process_owned_row(sheet, config, number, mapping)
       row = @batch.import_rows.find_or_initialize_by(source_sheet: config.fetch("name"), source_row_number: number)
       return if row.persisted? && row.status != "pending"
       raw, data = RowData.read(sheet, config, number, mapping)

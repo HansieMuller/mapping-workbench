@@ -37,6 +37,8 @@ module Importer
             "rows" => ((header + 1)..[ sheet.last_row.to_i, header + 5 ].min).map { |r| sheet.row(r).map { |v| display(v) } } }
         end }
       end
+    rescue NoMethodError, KeyError, TypeError
+      raise WorkbookGuard::Error, "Malformed workbook structure; re-save as a plain values-only XLSX"
     end
 
     def self.display(value)

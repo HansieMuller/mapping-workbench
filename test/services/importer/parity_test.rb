@@ -46,4 +46,35 @@ class Importer::ParityTest < ActiveSupport::TestCase
     assert_equal "unsupported", Importer::RowClassifier.classify("club" => "Lantern Harriers")
     assert_equal "blank", Importer::RowClassifier.classify({})
   end
+  test "typed Excel durations keep elapsed days beyond 24 hours" do
+    file = Tempfile.new([ "elapsed", ".xlsx" ])
+    package = Axlsx::Package.new
+    style = package.workbook.styles.add_style(format_code: "[h]:mm:ss")
+    package.workbook.add_worksheet(name: "Synthetic") do |sheet|
+      sheet.add_row [ "Full name", "Finish time" ]
+      sheet.add_row [ "Echo Lantern", 1.25 ], style: [ nil, style ]
+    end
+    package.serialize(file.path)
+    Importer::WorkbookGuard.validate!(file.path)
+    workbook = Roo::Excelx.new(file.path)
+    sheet = workbook.sheet(0)
+    config = { "headers" => [ { "index" => 0, "letter" => "A", "name" => "Full name" }, { "index" => 1, "letter" => "B", "name" => "Finish time" } ] }
+    raw, mapped = Importer::RowData.read(sheet, config, 2, "0" => "full_name", "1" => "finish_time")
+    assert_equal 1.25, raw[1]["value"]
+    assert_equal "30:00:00", mapped["finish_time"]
+    assert_equal 108_000, Importer::TimeParser.seconds(mapped["finish_time"])
+  ensure
+    workbook&.close
+    file&.close!
+  end
+  test "empty worksheets remain previewed and need no phantom mapping input" do
+    preview = { "sheets" => [
+      { "key" => "0", "name" => "Results", "headers" => [ { "index" => 0 }, { "index" => 1 } ] },
+      { "key" => "1", "name" => "Empty", "headers" => [] }
+    ] }
+    config = { "sheets" => { "0" => { "0" => "full_name", "1" => "finish_time" } } }
+    assert_equal({}, Importer::MappingValidator.validate!(preview, config)["sheets"]["1"])
+    config["sheets"]["1"] = { "999" => "finish_time" }
+    assert_raises(Importer::MappingValidator::Error) { Importer::MappingValidator.validate!(preview, config) }
+  end
 end

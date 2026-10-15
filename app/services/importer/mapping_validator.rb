@@ -3,9 +3,13 @@ module Importer
     class Error < StandardError; end
 
     def self.validate!(preview, config)
-      raise Error, "Mappings must be an object" unless config.is_a?(Hash) && config["sheets"].is_a?(Hash)
+      raise Error, "Mappings must be an object" unless config.is_a?(Hash) && config.keys == [ "sheets" ] && config["sheets"].is_a?(Hash)
       sheets = preview.fetch("sheets")
-      raise Error, "Map every previewed worksheet and no unknown worksheets" unless config["sheets"].keys.sort == sheets.map { |s| s.fetch("key") }.sort
+      known_keys = sheets.map { |s| s.fetch("key") }
+      empty_keys = sheets.select { |s| s.fetch("headers").empty? }.map { |s| s.fetch("key") }
+      # Browsers submit no select inputs for a completely empty worksheet.
+      empty_keys.each { |key| config["sheets"][key] ||= {} }
+      raise Error, "Map every previewed worksheet and no unknown worksheets" unless config["sheets"].keys.sort == known_keys.sort
       results = 0
       sheets.each do |sheet|
         columns = config["sheets"][sheet["key"]]

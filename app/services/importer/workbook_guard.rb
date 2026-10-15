@@ -30,7 +30,8 @@ module Importer
         raise Error, "Archive has too many entries" if zip.entries.size > MAX_ENTRIES
         names = zip.entries.map(&:name)
         raise Error, "Duplicate archive paths" if names.map(&:downcase).uniq.size != names.size
-        raise Error, "Missing workbook XML" unless names.include?("xl/workbook.xml") && names.include?("[Content_Types].xml")
+        raise Error, "Missing workbook XML" unless names.include?("xl/workbook.xml") && names.include?("[Content_Types].xml") && names.include?("xl/_rels/workbook.xml.rels")
+        @names = names
         zip.each do |entry|
           validate_path!(entry)
           next if entry.directory?
@@ -46,12 +47,14 @@ module Importer
           doc = parse_xml(content)
           validate_relationships!(doc) if entry.name.end_with?(".rels")
           validate_workbook!(doc) if entry.name == "xl/workbook.xml"
-          validate_sheet!(doc) if entry.name.match?(%r{\Axl/worksheets/[^/]+\.xml\z})
+          validate_worksheet_targets!(doc) if entry.name == "xl/_rels/workbook.xml.rels"
+          validate_sheet!(doc) if doc.at_xpath("//*[local-name()='sheetData']")
           if entry.name == "xl/sharedStrings.xml"
             doc.xpath("//*[local-name()='si']").each { |cell| validate_cell!(cell) }
           end
         end
       end
+      raise Error, "Worksheet names and relationship IDs do not match" unless @sheet_ids && @relationship_ids && @sheet_ids.sort == @relationship_ids.sort
       true
     rescue Zip::Error, Nokogiri::XML::SyntaxError, ArgumentError, EOFError, Zlib::Error
       raise Error, "Malformed XLSX archive or XML"
@@ -79,9 +82,24 @@ module Importer
       end
     end
 
+    # Roo follows relationships and interpolates filenames into regular expressions.
+    # Accept literal safe filenames only, and ensure each target is a guarded worksheet part.
+    def validate_worksheet_targets!(doc)
+      relationships = doc.xpath("//*[local-name()='Relationship']").select { |r| r["Type"] == "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" }
+      raise Error, "Workbook must link 1 to 8 worksheets" unless relationships.size.between?(1, MAX_SHEETS)
+      @relationship_ids = relationships.map { |rel| rel["Id"] }
+      raise Error, "Duplicate worksheet relationships" if @relationship_ids.any?(&:blank?) || @relationship_ids.uniq.size != @relationship_ids.size
+      relationships.each do |rel|
+        target = rel["Target"].to_s.delete_prefix("/xl/")
+        raise Error, "Nonstandard worksheet targets are unsupported" unless target.match?(%r{\Aworksheets/[A-Za-z0-9_-]+\.xml\z}) && @names.include?("xl/#{target}")
+      end
+    end
+
     def validate_workbook!(doc)
       sheets = doc.xpath("//*[local-name()='sheet']")
       raise Error, "Workbook must contain 1 to 8 worksheets" unless sheets.size.between?(1, MAX_SHEETS)
+      @sheet_ids = sheets.map { |sheet| sheet.attribute_nodes.find { |attr| attr.name == "id" && attr.namespace&.href == "http://schemas.openxmlformats.org/officeDocument/2006/relationships" }&.value }
+      raise Error, "Invalid worksheet relationship IDs" if @sheet_ids.any?(&:blank?) || @sheet_ids.uniq.size != @sheet_ids.size
       raise Error, "Duplicate worksheet names" unless sheets.map { |s| s["name"] }.uniq.size == sheets.size
       raise Error, "1904 date workbooks are unsupported; save using the 1900 date system" if doc.at_xpath("//*[local-name()='workbookPr']")&.[]("date1904").in?([ "1", "true" ])
     end

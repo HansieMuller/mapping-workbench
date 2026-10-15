@@ -8,7 +8,9 @@ module Importer
       if value.is_a?(Numeric) || value.to_s.strip.match?(/\A\d+(?:\.\d+)?\z/)
         number = Float(value)
         raise InvalidValue, "Time must be between 0 and 199999 seconds" unless number.finite? && number >= 0 && number < 200_000
-        return (number.positive? && number < 1 ? number * 86_400 : number).round
+        result = (number.positive? && number < 1 ? number * 86_400 : number).round
+        raise InvalidValue, "Time exceeds 199999 seconds" if result >= 200_000
+        return result
       end
       match = /\A(\d{1,3}):(\d{2})(?::(\d{2}(?:\.\d+)?))?\z/.match(value.to_s.strip)
       raise InvalidValue, "Time must be HH:MM[:SS], an Excel day fraction, or seconds" unless match

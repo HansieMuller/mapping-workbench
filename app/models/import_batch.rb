@@ -53,10 +53,12 @@ class ImportBatch < ApplicationRecord
   # Availability of the advisory lock proves there is no connected worker owner.
   # It is safe to resume immediately; no timer guesses that a live worker has died.
   def resume!
-    acquired = Importer::DatabaseLock.with_batch(id) do
-      reload
-      raise Importer::MappingValidator::Error, "This batch cannot be resumed" unless queued? || processing? || failed?
-      update!(status: :queued, fatal_error: nil, queued_at: Time.current)
+    acquired = Importer::DatabaseLock.with_batch(id) do |ownership|
+      with_lock("FOR NO KEY UPDATE") do
+        ownership.verify!
+        raise Importer::MappingValidator::Error, "This batch cannot be resumed" unless queued? || processing? || failed?
+        update!(status: :queued, fatal_error: nil, queued_at: Time.current)
+      end
     end
     raise Importer::MappingValidator::Error, "A worker still owns this batch" unless acquired
     enqueue!

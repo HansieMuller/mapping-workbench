@@ -96,4 +96,47 @@ class Importer::PostgresqlConcurrencyTest < ActiveSupport::TestCase
     assert_equal 1, Club.count
     assert_equal 1, Membership.count
   end
+  test "terminated backend cannot resume writing after a replacement worker completes" do
+    batch = attach_workbook(create_batch, name: "success.xlsx")
+    batch.update!(status: :queued, total_rows: 8)
+    ready, release = Queue.new, Queue.new
+    stale = Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection do
+        importer = Importer::WorkbookImporter.new(ImportBatch.find(batch.id))
+        first = true
+        importer.define_singleton_method(:process_row) do |*args|
+          super(*args)
+          if first
+            first = false
+            ready << ActiveRecord::Base.connection.exec_query("SELECT pg_backend_pid()").rows.first.first
+            Timeout.timeout(10) { release.pop }
+          end
+        end
+        begin
+          importer.call
+        rescue Importer::DatabaseLock::OwnershipLost
+          :ownership_lost
+        end
+      end
+    end
+    pid = Timeout.timeout(10) { ready.pop }
+    bind = ActiveRecord::Relation::QueryAttribute.new("pid", pid, ActiveRecord::Type::Integer.new)
+    terminated = ActiveRecord::Base.connection.exec_query("SELECT pg_terminate_backend($1)", "Terminate only test worker", [ bind ]).rows.first.first
+    assert terminated
+    assert_equal 1, batch.reload.import_rows.where(status: "imported").count
+    batch.resume!
+    ImportWorkbookJob.perform_now(batch.id)
+    assert_equal "completed", batch.reload.status
+    replacement_state = batch.attributes
+    version_count = PaperTrail::Version.count
+    release << true
+    assert_equal :ownership_lost, stale.value
+    assert_equal replacement_state, batch.reload.attributes
+    assert_equal version_count, PaperTrail::Version.count
+    assert_equal 6, batch.imported_rows
+    assert_equal 4, RaceResult.count
+  ensure
+    release << true if release
+    stale&.join(10)
+  end
 end
