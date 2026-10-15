@@ -24,6 +24,44 @@ class ImportBatch < ApplicationRecord
       percentage: total_rows.zero? ? 0 : (100.0 * processed_rows / total_rows).round.clamp(0, 100) }
   end
 
+  def broadcast_progress!
+    ImportBatchChannel.broadcast_to(self, progress_payload)
+  end
+
+  def refresh_counts!
+    counts = import_rows.group(:status).count
+    update_columns(imported_rows: counts.fetch("imported", 0), failed_rows: counts.fetch("failed", 0),
+      skipped_rows: counts.fetch("skipped", 0), heartbeat_at: Time.current, updated_at: Time.current)
+  end
+
+  # Queue state is durable before Redis delivery. A lost delivery can be explicitly resumed.
+  def queue!(config)
+    with_lock do
+      raise Importer::MappingValidator::Error, "Mappings are locked once queued" unless pending_mapping?
+      Importer::MappingValidator.validate!(preview_data, config)
+      update!(mapping_config: config, status: :queued, queued_at: Time.current,
+        total_rows: preview_data.fetch("sheets").sum { |sheet| sheet.fetch("total_rows") })
+    end
+    enqueue!
+  end
+
+  def enqueue!
+    job = ImportWorkbookJob.perform_later(id)
+    update_column(:job_id, job.provider_job_id)
+  end
+
+  # Availability of the advisory lock proves there is no connected worker owner.
+  # It is safe to resume immediately; no timer guesses that a live worker has died.
+  def resume!
+    acquired = Importer::DatabaseLock.with_batch(id) do
+      reload
+      raise Importer::MappingValidator::Error, "This batch cannot be resumed" unless queued? || processing? || failed?
+      update!(status: :queued, fatal_error: nil, queued_at: Time.current)
+    end
+    raise Importer::MappingValidator::Error, "A worker still owns this batch" unless acquired
+    enqueue!
+  end
+
   private
 
   def race_belongs_to_event

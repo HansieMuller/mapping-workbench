@@ -9,7 +9,7 @@ module Authentication
   private
 
   def current_user
-    Current.session ||= Session.find_by(id: cookies.signed[:session_id])
+    Current.session ||= Session.where("created_at > ?", 12.hours.ago).find_by(id: cookies.signed[:session_id])
     Current.user
   end
 
