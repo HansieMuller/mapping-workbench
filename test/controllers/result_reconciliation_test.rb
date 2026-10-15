@@ -84,10 +84,91 @@ class ResultReconciliationTest < ActionDispatch::IntegrationTest
     assert_equal 1, Athlete.count
   end
 
+  test "canonical statuses and aliases are stored canonically with untouched source text" do
+    fields = %w[race_number full_name id_number finish_time finish_status]
+    statuses = [ [ "finished", "finished" ], [ "  Did Not Start  ", "dns" ], [ "WITHDRAWN", "dnf" ], [ "  DQ  ", "disqualified" ], [ "query", "query" ] ]
+    rows = statuses.each_with_index.map do |(supplied, _canonical), index|
+      [ (601 + index).to_s, "Fictional Comet #{index}", format("%013d", 61 + index), "00:30:00", supplied ]
+    end
+    batch = import_workbook(fields, rows)
+    statuses.each_with_index do |(supplied, canonical), index|
+      result = RaceResult.find_by!(race_number: (601 + index).to_s)
+      assert_equal canonical, result.finish_status
+      row = batch.import_rows.find_by!(source_row_number: index + 2)
+      assert_equal supplied, row.raw_data[4]["value"]
+      assert_equal supplied.strip, row.normalized_data["finish_status"]
+    end
+  end
+
+  test "invalid status rolls back a new graph and later valid workbook rows succeed" do
+    fields = %w[race_number full_name id_number finish_time finish_status club email]
+    rows = [ [ "701", "Rejected Willow", "0000000000071", "00:30:00", "INVALID_STATUS", "Rejected Club", "rejected@example.test" ],
+      [ "702", "Accepted Willow", "0000000000072", "00:31:00", "Did Not Finish", "Accepted Club", "accepted@example.test" ] ]
+    batch = import_workbook(fields, rows, expected_status: "completed_with_errors")
+    assert_equal [ 2, 1, 1, 0 ], [ batch.total_rows, batch.imported_rows, batch.failed_rows, batch.skipped_rows ]
+    failed = batch.import_rows.find_by!(source_row_number: 2)
+    assert_equal "failed", failed.status
+    assert_equal "finish_result", failed.row_type
+    assert_match(/Finish status is not a supported result status/, failed.error_message)
+    assert_equal "INVALID_STATUS", failed.raw_data[4]["value"]
+    assert_equal "INVALID_STATUS", failed.normalized_data["finish_status"]
+    assert_nil failed.athlete_id
+    assert_nil failed.race_result_id
+    assert_nil Athlete.find_by(id_number: "0000000000071")
+    assert_nil Club.find_by(name: "Rejected Club")
+    assert_equal 1, Athlete.count
+    assert_equal 1, Club.count
+    assert_equal 1, Membership.count
+    assert_equal 1, RaceResult.count
+    assert_equal "dnf", RaceResult.sole.finish_status
+    assert_equal "imported", batch.import_rows.find_by!(source_row_number: 3).status
+    assert_equal [ RaceResult.sole.id ], PaperTrail::Version.where(item_type: "RaceResult").pluck(:item_id)
+    assert_equal [ Athlete.sole.id ], PaperTrail::Version.where(item_type: "Athlete").pluck(:item_id)
+  end
+
+  test "invalid numbered correction leaves result athlete membership and audit untouched" do
+    first = import_workbook(RESULT_FIELDS, [ COMPLETE_ROW ])
+    result = RaceResult.find_by!(race_number: "501")
+    athlete = result.athlete
+    before = [ result.attributes, athlete.attributes, result.versions.count, athlete.versions.count ]
+    invalid = COMPLETE_ROW.dup
+    invalid[3] = "00:40:00"
+    invalid[4] = "UNRECOGNIZED"
+    invalid[10] = "Rollback Club"
+    fields = RESULT_FIELDS + [ "email" ]
+    later = [ "502", "Later Aurora", "0000000000052", "00:41:00", "finished", nil, nil, nil, nil, nil, nil, nil, nil ]
+    batch = import_workbook(fields, [ invalid + [ "rollback@example.test" ], later ], expected_status: "completed_with_errors")
+    assert_equal before, [ result.reload.attributes, athlete.reload.attributes, result.versions.count, athlete.versions.count ]
+    assert_equal first.id, result.import_batch_id
+    assert_nil athlete.email
+    assert_nil Club.find_by(name: "Rollback Club")
+    assert_equal 1, Membership.count
+    assert_equal 2, Athlete.count
+    assert_equal 2, RaceResult.count
+    failed = batch.import_rows.find_by!(source_row_number: 2)
+    assert_equal "failed", failed.status
+    assert_match(/Finish status/, failed.error_message)
+    assert_equal "UNRECOGNIZED", failed.raw_data[4]["value"]
+    assert_equal "imported", batch.import_rows.find_by!(source_row_number: 3).status
+  end
+
+  test "blank or missing statuses remain optional and non-result classifications stay intact" do
+    fields = %w[race_number full_name id_number finish_time finish_status]
+    batch = import_workbook(fields, [ [ "801", "Blank Comet", "0000000000081", "00:30:00", " " ],
+      [ "802", "Registration Comet", "0000000000082", nil, "Unknown" ],
+      [ nil, "Profile Comet", "0000000000083", nil, "PROFILE_NOTE" ] ])
+    assert_nil RaceResult.sole.finish_status
+    assert_equal %w[finish_result registration athlete_profile], batch.import_rows.order(:source_row_number).pluck(:row_type)
+    assert_equal 3, Athlete.count
+    missing = import_workbook(fields.first(4), [ [ "804", "Missing Comet", "0000000000084", "00:32:00" ] ])
+    assert_nil missing.import_rows.sole.race_result.finish_status
+    assert_equal 2, RaceResult.count
+  end
+
   private
 
   # Every scenario uses generated XLSX bytes through authenticated upload, preview and mapping.
-  def import_workbook(fields, rows, mapped: fields)
+  def import_workbook(fields, rows, mapped: fields, expected_status: "completed")
     file = Tempfile.new([ "reconciliation", ".xlsx" ])
     package = Axlsx::Package.new
     package.workbook.add_worksheet(name: "Synthetic") do |sheet|
@@ -109,7 +190,7 @@ class ResultReconciliationTest < ActionDispatch::IntegrationTest
     end
     assert_equal "queued", batch.reload.status
     ImportWorkbookJob.perform_now(batch.id)
-    assert_equal "completed", batch.reload.status
+    assert_equal expected_status, batch.reload.status
     batch
   ensure
     file&.close!
