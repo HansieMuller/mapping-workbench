@@ -1,0 +1,8 @@
+<h1>Sign in to MappingWorkbench</h1>
+<p>Use the local operator account created by <code>bin/setup</code>.</p>
+<% if flash[:alert] %><p role="alert"><%= flash[:alert] %></p><% end %>
+<%= form_with url: session_path do |f| %>
+  <%= f.label :email %><%= f.email_field :email, required: true, autocomplete: "username" %>
+  <%= f.label :password %><%= f.password_field :password, required: true, autocomplete: "current-password" %>
+  <%= f.submit "Sign in" %>
+<% end %>
