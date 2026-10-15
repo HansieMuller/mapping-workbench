@@ -35,7 +35,7 @@ Both services and the web server bind to localhost. The dedicated databases are 
 2. **1:00–2:00:** Inspect all three sheets. Results uses header row 3; column D is unnamed and unused. Profiles keeps columns through AB. Inspect header candidates and change a row if necessary. Every sheet has its own mapping selectors.
 3. **2:00–3:00:** Confirm mappings. A separate Sidekiq worker processes rows against PostgreSQL. The page receives authenticated ActionCable updates and moves to persisted outcomes.
 4. **3:00–4:00:** Observe **6 imported, 3 failed, 1 skipped**. Four results and six athletes exist. Profile/registration rows created athletes without results. Inspect an error and original cells, then open Athletes and Results.
-5. **4:00–5:00:** Upload `updates.xlsx` into the same race. Race number 101 changes from `00:51:23` to `00:49:01`, retaining its creating batch. Upload `conflict.xlsx` to see conflicting identity/race-number rows rejected. Explain resume using the backend-loss and interrupted-job tests.
+5. **4:00–5:00:** Upload `updates.xlsx` into the same race. Race number 101 changes from `00:51:23` to `00:49:01`, retaining its creating batch. Numbered corrections preserve unmapped/blank fields and replace mapped nonblank values. Results store canonical finish statuses; an unrecognized supplied status fails its row without partial domain writes. Upload `conflict.xlsx` to see conflicting identity/race-number rows rejected. Explain resume using the backend-loss and interrupted-job tests.
 
 Use `success.xlsx` for 6 imported / 2 skipped with no row errors. Generate the fictional examples again with `bundle exec ruby script/generate_workbooks.rb`. All example workbooks use generated fictional data.
 

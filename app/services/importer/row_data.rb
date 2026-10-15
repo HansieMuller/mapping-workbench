@@ -10,7 +10,12 @@ module Importer
         raw << { "index" => index, "column" => header.fetch("letter"), "header" => header.fetch("name"),
           "type" => type.to_s, "value" => original, "interpreted_value" => WorkbookPreview.display(value) }
         field = mapping.fetch(index.to_s)
-        next if field == "unused" || value.nil? || value.to_s.strip.empty?
+        next if field == "unused"
+        # Keep mapping presence even for empty cells; corrections must distinguish blanks from Unused.
+        if value.nil? || value.to_s.strip.empty?
+          mapped[field] = nil
+          next
+        end
         # Roo time-formatted cells return seconds; the XML retains the original Excel day fraction.
         mapped[field] = if field == "finish_time" && %i[time datetime].include?(type)
           # Typed Excel time/duration cells are day units, including elapsed days over 24h.

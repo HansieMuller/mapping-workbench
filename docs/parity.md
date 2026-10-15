@@ -8,13 +8,13 @@ MappingWorkbench processes workbooks through context selection → upload → wo
 | XLSX and every worksheet, header candidates, samples, letters beyond Z, unnamed columns | Complete | Human confirmation/correction of headers; suggestions use explicit alias evidence |
 | 17 destinations plus Unused, explicit aliases, duplicate/prerequisite guards | Validated | Per-sheet UI and server validation reject crafted indexes and destinations |
 | Passport | Service-level support | Tested internally; the mapping dropdown contains 17 fields |
-| Typed cells, dates, time fractions/seconds/durations and status aliases | Validated | Invalid supplied values fail explicitly; workbook display text remains separate |
+| Typed cells, dates, time fractions/seconds/durations and status aliases | Validated | Results store canonical statuses; unrecognized supplied result statuses fail the row and roll back domain/audit writes; raw text remains separate |
 | Result, registration, profile, unsupported and blank classification | Complete | Registration/profile rows create no results; blank rows persist as skipped for truthful counters |
-| Raw and mapped provenance | Complete | Sheet, row, column letter/header, cell type/value and normalized values retained separately |
+| Raw and mapped provenance | Complete | Sheet, row, column letter/header, cell type/value and normalized values retained separately; mapped blanks retain nil keys, Unused fields stay absent |
 | ID → passport → name/birth identity precedence | Validated | Reject material name/birth/identifier conflicts |
 | Fill missing only, permanent number as attribute, club memberships | Complete | Permanent number is not an identity key; normalized club and membership uniqueness enforced |
 | Ambiguous name-only identities | Guarded | Batch-local identity without DOB/strong ID; later batches reject ambiguous matches rather than guessing |
-| Race-number upsert across batches | Complete | Preserve first creating batch; reject race number reassignment to another athlete |
+| Race-number upsert across batches | Complete | Preserve first creating batch; reject race number reassignment; mapped nonblank corrections update while unmapped/blank fields preserve stored values |
 | No race number | Complete | Match batch/race/athlete only; separate results across batches |
 | Time display/seconds, positions, category and age at event | Complete | Event date and birth date determine age |
 | Per-row transactions and partial success | Complete | Earlier committed rows survive failed rows; failure provenance persists outside rolled-back work |
