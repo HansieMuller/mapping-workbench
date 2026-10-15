@@ -45,8 +45,6 @@ Publication checks inspect tracked/intended files, generated XLSX XML, genuine s
 
 The reset smoke check first imported `mixed.xlsx` into the dedicated development database: 10 row outcomes, 4 results and 19 audit versions, plus an attached source file. After `bin/reset --confirm`, readback found no batches, rows, results, blobs or queued imports, and the old source file no longer existed. The fresh seed recreated one operator, event and race, two new audit versions, and a mode-0600 password file. This caught and corrected Active Storage's refusal to purge attached blobs; reset now purges attachments before orphan blobs.
 
-The original importer was inspected on its actual default branch. No changes were made to the original repository; the build used a scratch inspection checkout, fresh Rails generation and new fictional fixtures. Private source URLs, excerpts and original public spreadsheets/lockfiles are excluded from public documentation.
-
 ## Remaining limitations
 
 - Manual resume repairs interrupted/lost-delivery work. Open-source Sidekiq is not exactly-once execution; there is no transactional outbox or automatic recovery watchdog.
@@ -54,5 +52,4 @@ The original importer was inspected on its actual default branch. No changes wer
 - Workbook parsing is bounded and tested, but is not a formal parser sandbox. Formulas, macros, external references, 1904 dates and noncanonical archive parts are deliberately unsupported.
 - Raw unused columns are retained locally. Use fictional input and reset to remove it.
 - Public deployment and scale are untested. Browser evidence is Chrome only; load tests and cross-browser campaigns were not run.
-- Source investigation could not use the JetBrains backend because its IDE service was unavailable; the source Ruby version was also absent for LSP. Targeted call tracing was used there. LSP symbol lookup worked in the new application.
-- No new redistribution license or exclusive-authorship claim is made. This authorized derivative remains a local demonstration without production deployment.
+- JetBrains semantic tooling was unavailable because its IDE service was not running. LSP symbol lookup worked for this application.

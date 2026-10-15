@@ -11,4 +11,4 @@
 
 ## 0.1.0.0 — 2026-10-15
 
-- Publish a fresh runnable Rails scaffold and source-inspection parity contract on `main`.
+- Publish a runnable Rails scaffold and mapping workflow feature checklist on `main`.

@@ -125,7 +125,7 @@ class Importer::RelationalImportTest < ActiveSupport::TestCase
     file&.close!
   end
 
-  test "numbered results replace omitted fields and Feb 29 birthdays follow original calendar rule" do
+  test "numbered results replace omitted fields and Feb 29 birthdays use March 1 in non-leap years" do
     batch = create_batch
     athlete = Athlete.create!(full_name: "Leap Fiction", date_of_birth: Date.new(1984, 2, 29))
     @event.update!(event_date: Date.new(2026, 2, 28))

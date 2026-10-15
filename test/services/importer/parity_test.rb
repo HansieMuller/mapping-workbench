@@ -3,7 +3,7 @@ require "test_helper"
 class Importer::ParityTest < ActiveSupport::TestCase
   setup { create_context }
 
-  test "original 17 fields, explicit normalized aliases and conservative unknowns" do
+  test "17 mapping fields, explicit normalized aliases and conservative unknowns" do
     assert_equal 17, Importer::HeaderMapper::FIELDS.length
     { "RaceNo" => "race_number", "ID_NUMBER" => "id_number", "DOB" => "date_of_birth", "RaceTime" => "finish_time", "OverallFinishPosition" => "overall_position" }.each do |header, field|
       assert_equal field, Importer::HeaderMapper.suggest(header)
@@ -25,7 +25,7 @@ class Importer::ParityTest < ActiveSupport::TestCase
     assert_equal 1, corrected["sheets"][0]["header_row"]
   end
 
-  test "dates times and status aliases retain the source contract" do
+  test "dates times and status aliases follow the normalization rules" do
     assert_equal Date.new(1991, 4, 12), Importer::DateParser.date(Date.new(1991, 4, 12))
     assert_equal Date.new(1975, 6, 27), Importer::DateParser.date("750627", reference_year: 2026)
     assert_equal Date.new(2024, 1, 9), Importer::DateParser.date(45_300)

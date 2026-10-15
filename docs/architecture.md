@@ -21,7 +21,7 @@ flowchart LR
 
 ## Domain
 
-An event has dated races. Every batch belongs to an uploader, event and race. A composite PostgreSQL foreign key enforces the selected race/event relationship, alongside Rails validation. The import never derives a race from worksheet text; the inactive legacy row-based resolver is excluded.
+An event has dated races. Every batch belongs to an uploader, event and race. A composite PostgreSQL foreign key enforces the selected race/event relationship, alongside Rails validation. All imported results target the batch-selected race.
 
 Athletes have memberships in normalized clubs and results in races. Import rows link the batch to their resolved athlete/result, with unique `(batch, sheet, source row)` checkpoints. Results keep their creating batch; later contributing rows remain separately traceable. PaperTrail versions cover event/race, athlete, batch and result changes. Background versions carry `User:<uploader id>`.
 
@@ -49,4 +49,4 @@ Progress payloads contain aggregate state rather than raw rows. Each subscriptio
 
 Uploaded workbooks and unused raw cells remain local and private. That retention helps explain failures but is not data minimization; use fictional data and the documented reset workflow. Logs filter uploads, mapping/provenance, credentials and serialized version objects. The generated password stays outside tracked source.
 
-Compose services and Puma bind to localhost. Database names and Redis port/databases are restricted for this demo. Production environment files are Rails scaffold configuration, not original deployment settings; there is no deployed app or production connector.
+Compose services and Puma bind to localhost. Database names and Redis port/databases are restricted for this demo. There is no deployed app or production connector.

@@ -37,7 +37,7 @@ Both services and the web server bind to localhost. The dedicated databases are 
 4. **3:00–4:00:** Observe **6 imported, 3 failed, 1 skipped**. Four results and six athletes exist. Profile/registration rows created athletes without results. Inspect an error and original cells, then open Athletes and Results.
 5. **4:00–5:00:** Upload `updates.xlsx` into the same race. Race number 101 changes from `00:51:23` to `00:49:01`, retaining its creating batch. Upload `conflict.xlsx` to see conflicting identity/race-number rows rejected. Explain resume using the backend-loss and interrupted-job tests.
 
-Use `success.xlsx` for 6 imported / 2 skipped with no row errors. Generate the fictional examples again with `bundle exec ruby script/generate_workbooks.rb`; no original workbook is used.
+Use `success.xlsx` for 6 imported / 2 skipped with no row errors. Generate the fictional examples again with `bundle exec ruby script/generate_workbooks.rb`. All example workbooks use generated fictional data.
 
 ![Persisted outcomes](docs/screenshots/outcomes.png)
 
@@ -53,7 +53,7 @@ It runs PostgreSQL tests and competing-session regressions, Chrome system tests 
 
 Demo seeds run only in development. A freshly prepared test database stays empty until tests build their own fictional context, and test preparation cannot replace the development password file.
 
-See [verification evidence](docs/evidence.md), [feature parity](docs/parity.md), [architecture](docs/architecture.md), [mapping and identity rules](docs/rules.md), and the [changelog](CHANGELOG.md).
+See [verification evidence](docs/evidence.md), [feature checklist](docs/parity.md), [architecture](docs/architecture.md), [mapping and identity rules](docs/rules.md), and the [changelog](CHANGELOG.md).
 
 ## Reset and stop
 
@@ -74,10 +74,8 @@ Reset purges uploaded files, clears this isolated demo's queues and rebuilds its
 - [`DatabaseLock`](app/services/importer/database_lock.rb), [`WorkbookImporter`](app/services/importer/workbook_importer.rb) and [`ImportBatch`](app/models/import_batch.rb): session/claim fencing, row savepoints, durable counters and checkpoint replay.
 - [`ImportWorkbookJob`](app/jobs/import_workbook_job.rb), [`ImportBatchChannel`](app/channels/import_batch_channel.rb), and [PostgreSQL concurrency tests](test/services/importer/postgresql_concurrency_test.rb): audit attribution, private progress and real transaction evidence.
 
-## Limits and provenance
+## Operating limits
 
 This is a local portfolio demonstration. There is no production deployment, scale claim, multitenancy, billing or generic transformation language. Public deployment would need a separate security review, TLS, restricted service access, managed credentials, operational monitoring, worker supervision, backups and retention policy. All authenticated operators share the fictional athlete/result domain; batches, uploads and provenance are private to their uploader.
-
-It is an authorized derivative of an existing importer, rebuilt with fresh Git history. No private source links/excerpts, customer records, original workbooks, branding, credentials or production configuration are published. The derivative's redistribution license has not been independently established, so this repository makes no additional licensing or exclusive-authorship claim. Third-party packages retain their licenses.
 
 Built with Rails and open-source libraries; Codex assisted implementation, review and verification.

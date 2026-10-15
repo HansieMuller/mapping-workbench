@@ -2,9 +2,9 @@
 
 ## Mapping
 
-Each worksheet has an independently confirmed header row and index-to-destination map. Header suggestions use normalized explicit aliases; ambiguous short words such as Name, ID, Time and unknown/internal fields stay Unused. Original headers, unnamed columns and Excel letters beyond Z survive. Branded source aliases were generalized/excluded rather than publishing branding.
+Each worksheet has an independently confirmed header row and index-to-destination map. Header suggestions use normalized explicit aliases; ambiguous short words such as Name, ID, Time and unknown/internal fields stay Unused. Workbook headers, unnamed columns and Excel letters beyond Z survive.
 
-The 17 destinations are race number, first name, last name, full name, ID number, permanent number, date of birth, gender, email, mobile number, club, finish status, finish time, overall position, category, category position and gender position. Passport remains service-level support with tests; it is not an original or public dropdown destination.
+The 17 destinations are race number, first name, last name, full name, ID number, permanent number, date of birth, gender, email, mobile number, club, finish status, finish time, overall position, category, category position and gender position. Passport has service-level support with tests; it is not available in the mapping dropdown.
 
 The UI disables duplicate destinations within one sheet and reports missing prerequisites. Server validation is authoritative: reject non-object maps, unknown sheets, missing/crafted indexes, unsupported destinations and duplicate fields. Header correction carries unsaved choices into a structurally validated draft, preserves sheets whose header row is unchanged and resets suggestions only on corrected sheets. Final result prerequisites are deferred for that draft and enforced before queuing: at least one sheet must map finish time, and sheets mapping finish time or finish status must map ID number, full name, or both first/last names. The finish-status-only prerequisite is an additional defensive guard. Headers/mappings become immutable when queued.
 
@@ -14,11 +14,11 @@ Original raw values, Roo type, interpreted value, column index/letter/header, so
 
 Date objects, positive whole Excel 1900 date serials, YYYY-MM-DD, YYYY/MM/DD, DD/MM/YYYY and compact YYMMDD are supported. Compact birth dates choose the century relative to the selected event year. Invalid supplied dates and future birth dates fail explicitly. The 1904 workbook date system is rejected. Strict input formats prevent locale-dependent guesses.
 
-Unformatted positive numbers below one are Excel day fractions; numbers at least one are seconds, following the source contract. Duration text is HH:MM[:SS[.fraction]] and decimal seconds round to a whole second. Minutes/seconds must be below 60, and total duration must be below 200000 seconds. Typed Excel duration/time cells preserve elapsed days: 1.25 days in `[h]:mm:ss` becomes 30:00:00 / 108000 seconds. Calendar date-time cells are not accepted as an arbitrary race duration when outside the supported range.
+Unformatted positive numbers below one are Excel day fractions; numbers at least one are seconds. Duration text is HH:MM[:SS[.fraction]] and decimal seconds round to a whole second. Minutes/seconds must be below 60, and total duration must be below 200000 seconds. Typed Excel duration/time cells preserve elapsed days: 1.25 days in `[h]:mm:ss` becomes 30:00:00 / 108000 seconds. Calendar date-time cells are not accepted as an arbitrary race duration when outside the supported range.
 
 Known aliases classify finished, DNS, DNF, disqualified and query results, including Not yet started, Withdrawn during race and Started and running. Original status text is retained. Unknown status or race number without a result produces registration; useful identity without result produces profile; other mapped content is unsupported; empty mapped values are blank. Registration/profile rows create athletes without inventing results. Blank/unsupported rows persist as skipped, including their provenance.
 
-Positions must be positive whole integers within PostgreSQL's integer range. Age uses the selected event date and birth date, ignoring any spreadsheet age. For a February 29 birthday, the original calendar rule considers it passed on March 1 in a non-leap year.
+Positions must be positive whole integers within PostgreSQL's integer range. Age uses the selected event date and birth date, ignoring any spreadsheet age. A February 29 birthday is considered passed on March 1 in a non-leap year.
 
 ## Identity
 
@@ -28,7 +28,7 @@ Positions must be positive whole integers within PostgreSQL's integer range. Age
 
 IDs in examples deliberately begin with zeroes and are synthetic, not valid national identities. Placeholder IDs/names such as N/A and Unknown never become strong identity keys. Permanent number remains a fill-missing attribute, not an identity match key.
 
-Conflicting strong IDs, passport, birth date or material normalized name fail the row. This hardens the source's willingness to accept a different name for an existing ID. Multiple name/birth candidates require a strong identifier; there is no silent merge. Strong identifiers cannot be reassigned through a name/birth fallback.
+Conflicting strong IDs, passport, birth date or material normalized name fail the row, even when the ID matches. Multiple name/birth candidates require a strong identifier; there is no silent merge. Strong identifiers cannot be reassigned through a name/birth fallback.
 
 Name-only profiles without birth date or strong ID get a batch-local identity key. Repeated names in that batch reuse it. Later batches finding that name without adequate identity fail rather than creating another duplicate or guessing that it is the same person. Supply ID or birth date for safe cross-batch reconciliation.
 
@@ -40,7 +40,7 @@ With a race number, match `(selected race, race number)` across batches. The exi
 
 Without a race number, match `(batch, selected race, athlete)`. Repeat rows in that batch reuse the result; a later batch intentionally creates its own unnumbered result.
 
-A result update replaces the imported result payload. Omitted/unmapped time/status/position/category/gender/club fields become nil, matching the source behavior. Fill-missing-only applies to athlete profiles, not result attributes. Use a complete result mapping when correcting a numbered result if those attributes need retaining.
+A result update replaces the imported result payload. Omitted/unmapped time/status/position/category/gender/club fields become nil. Fill-missing-only applies to athlete profiles, not result attributes. Use a complete result mapping when correcting a numbered result if those attributes need retaining.
 
 ## Workbook safety contract
 
