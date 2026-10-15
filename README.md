@@ -4,7 +4,7 @@ A spreadsheet import becomes a reconciliation problem when one workbook mixes ra
 
 MappingWorkbench is a standalone Rails application for that problem. Operators select event/race context, inspect every XLSX worksheet, correct headers, map 17 destinations, queue a background import and inspect live progress, relational results and original row provenance. All included people, identifiers, clubs and events are fictional.
 
-The public `main` branch intentionally contains the initial runnable scaffold. The complete application is on `feat/complete-importer` in an open review PR; it has not been merged or deployed.
+The public `main` branch intentionally contains the initial runnable scaffold. The complete application is on `feat/complete-importer` in [review PR #4](https://github.com/HansieMuller/mapping-workbench/pull/4); it has not been merged or deployed.
 
 ![Per-sheet mapping](docs/screenshots/mapping.png)
 
