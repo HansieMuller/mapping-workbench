@@ -10,13 +10,15 @@ The UI disables duplicate destinations within one sheet and reports missing prer
 
 ## Typed values and classification
 
-Original raw values, Roo type, interpreted value, column index/letter/header, source sheet and row are stored separately from mapped normalized values. Unused columns are retained. Numeric identifier cells cannot recover lost leading zeroes: store synthetic IDs as text in Excel.
+Original raw values, Roo type, interpreted value, column index/letter/header, source sheet and row are stored separately from mapped normalized values. Unused columns are retained in raw provenance but absent from the mapped hash; mapped empty or whitespace-only cells retain their destination key with a nil value. Numeric identifier cells cannot recover lost leading zeroes: store synthetic IDs as text in Excel.
 
 Date objects, positive whole Excel 1900 date serials, YYYY-MM-DD, YYYY/MM/DD, DD/MM/YYYY and compact YYMMDD are supported. Compact birth dates choose the century relative to the selected event year. Invalid supplied dates and future birth dates fail explicitly. The 1904 workbook date system is rejected. Strict input formats prevent locale-dependent guesses.
 
-Unformatted positive numbers below one are Excel day fractions; numbers at least one are seconds. Duration text is HH:MM[:SS[.fraction]] and decimal seconds round to a whole second. Minutes/seconds must be below 60, and total duration must be below 200000 seconds. Typed Excel duration/time cells preserve elapsed days: 1.25 days in `[h]:mm:ss` becomes 30:00:00 / 108000 seconds. Calendar date-time cells are not accepted as an arbitrary race duration when outside the supported range.
+Unformatted positive numbers below one are Excel day fractions; numbers at least one are seconds. Zero is a valid duration and can replace an existing time. Duration text is HH:MM[:SS[.fraction]] and decimal seconds round to a whole second. Minutes/seconds must be below 60, and total duration must be below 200000 seconds. Typed Excel duration/time cells preserve elapsed days: 1.25 days in `[h]:mm:ss` becomes 30:00:00 / 108000 seconds. Calendar date-time cells are not accepted as an arbitrary race duration when outside the supported range.
 
-Known aliases classify finished, DNS, DNF, disqualified and query results, including Not yet started, Withdrawn during race and Started and running. Original status text is retained. Unknown status or race number without a result produces registration; useful identity without result produces profile; other mapped content is unsupported; empty mapped values are blank. Registration/profile rows create athletes without inventing results. Blank/unsupported rows persist as skipped, including their provenance.
+`FinishStatus` defines the result vocabulary: finished, dns, dnf, disqualified and query. Case/whitespace-insensitive aliases include Not yet started → dns, Withdrawn during race / Started and running → dnf, and DQ → disqualified. Results store the canonical value; raw cells retain the exact supplied text, and mapped provenance retains the trimmed supplied text. An explicitly supplied unrecognized status on a result row fails validation, including when a valid time would otherwise classify it as a result. The row transaction rolls back athlete, club, membership, result and audit changes; the failed row and error provenance persist, and later rows continue. A valid time with missing/blank status is allowed and does not imply finished.
+
+The literal Unknown status or a race number without a result produces registration; useful identity without a result produces profile; other mapped content is unsupported; empty mapped values are blank. Registration/profile rows create athletes without inventing results and do not acquire result-status validation. Blank/unsupported rows persist as skipped, including their provenance. Normal validated result writes outside the importer use the same status normalization and validation. Existing aliases normalize on their next validated save; a previously stored unsupported status requires a valid correction before that result can save.
 
 Positions must be positive whole integers within PostgreSQL's integer range. Age uses the selected event date and birth date, ignoring any spreadsheet age. A February 29 birthday is considered passed on March 1 in a non-leap year.
 
@@ -40,7 +42,13 @@ With a race number, match `(selected race, race number)` across batches. The exi
 
 Without a race number, match `(batch, selected race, athlete)`. Repeat rows in that batch reuse the result; a later batch intentionally creates its own unnumbered result.
 
-A result update replaces the imported result payload. Omitted/unmapped time/status/position/category/gender/club fields become nil. Fill-missing-only applies to athlete profiles, not result attributes. Use a complete result mapping when correcting a numbered result if those attributes need retaining.
+Existing numbered results receive partial corrections:
+
+- **Unmapped:** preserve the stored field, even if its worksheet column contains a value but is marked Unused.
+- **Mapped but blank:** preserve the stored field. Empty/whitespace-only cells are recorded as nil in mapped provenance; there is no clear operation.
+- **Mapped with a value:** replace the result field, including a valid zero duration. Time display and parsed seconds update together. Age recalculates when a nonblank birth date is mapped; otherwise the stored age remains.
+
+New results may have nil optional fields and calculate age from the resolved athlete's known birth date. Unnumbered results retain their per-batch replacement behavior: repeated rows in that batch replace the imported payload, including nil optional values, while another batch creates a separate result. Athlete profiles continue to fill missing fields only. Every contributing row retains its own raw/mapped provenance and result link; the result keeps its creating batch. Terminal-row replay does not reapply corrections or add audit versions. Status normalization applies to every validated result save as described above.
 
 ## Workbook safety contract
 
