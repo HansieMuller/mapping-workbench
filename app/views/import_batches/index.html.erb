@@ -1,0 +1,93 @@
+<div class="page-heading">
+<div>
+<p class="eyebrow">OPERATIONS / IMPORTS</p>
+<h1>Workbook import history</h1>
+<p>Turn messy worksheets into traceable relational records.</p>
+</div>
+<%= link_to "New import →", new_import_batch_path, class: "button" %>
+</div>
+<div class="intro-grid">
+<div class="card">
+<span class="eyebrow">01 / MAP</span>
+<h2>Keep every sheet in context</h2>
+<p>Inspect headers, preserve unused columns and map only the fields you recognize.</p>
+</div>
+<div class="card">
+<span class="eyebrow">02 / RECONCILE</span>
+<h2>Resolve before writing</h2>
+<p>Match identities, retain memberships and update results within the selected race.</p>
+</div>
+<div class="card">
+<span class="eyebrow">03 / AUDIT</span>
+<h2>Every row has a story</h2>
+<p>Successful rows survive failures. Inspect original cells, outcomes and audit attribution.</p>
+</div>
+</div>
+<section class="card">
+<div class="section-heading">
+<h2>Your import batches</h2>
+<%= form_with url: import_batches_path, method: :get, class: "search" do |f| %>
+<%= f.search_field :q, value: @query, placeholder: "Search file, event or status", aria: { label: "Search imports" } %>
+<%= f.submit "Search", class: "secondary" %>
+<% end %>
+</div>
+<% if @batches.empty? %>
+<div class="empty">
+<h3>
+<%= @query.present? ? "No matching imports" : "Start with a fictional workbook" %>
+</h3>
+<p>Choose event and race context, then upload a generated XLSX from <code>test/fixtures/files</code>.</p>
+<%= link_to "Create an import", new_import_batch_path, class: "button" %>
+</div>
+<% else %>
+<div class="table-scroll">
+<table>
+<thead>
+<tr>
+<th>Workbook</th>
+<th>Context</th>
+<th>Status</th>
+<th>Rows</th>
+<th>Uploaded</th>
+</tr>
+</thead>
+<tbody>
+<% @batches.each do |batch| %>
+<tr>
+<td>
+<%= link_to batch.file_name, batch %>
+<small>Batch #<%= batch.id %>
+</small>
+</td>
+<td>
+<%= batch.event.name %>
+<small>
+<%= batch.race.display_name %>
+</small>
+</td>
+<td>
+<span class="badge <%= batch.status %>">
+<%= batch.status.humanize %>
+</span>
+</td>
+<td>
+<%= batch.processed_rows %> / <%= batch.total_rows %>
+<small>
+<%= batch.failed_rows %> failed</small>
+</td>
+<td>
+<%= batch.created_at.strftime("%d %b %Y, %H:%M") %>
+</td>
+</tr>
+<% end %>
+</tbody>
+</table>
+</div>
+<% end %>
+<div class="pagination">
+<%= link_to "← Previous", import_batches_path(page: @page - 1, q: @query) if @page > 1 %>
+<span>Page <%= @page %>
+</span>
+<%= link_to "Next →", import_batches_path(page: @page + 1, q: @query) if @batches.size == 25 %>
+</div>
+</section>

@@ -1,0 +1,75 @@
+<div class="page-heading">
+<div>
+<p class="eyebrow">RELATIONAL DOMAIN</p>
+<h1>Race results</h1>
+<p>Numbered results update across batches. Results without a number stay batch-scoped.</p>
+</div>
+</div>
+<section class="card">
+<%= form_with url: race_results_path, method: :get, class: "search" do |f| %>
+<%= f.search_field :q, value: params[:q], placeholder: "Search athlete or race number", aria: { label: "Search results" } %>
+<%= f.submit "Search", class: "secondary" %>
+<% end %>
+<div class="table-scroll">
+<table>
+<thead>
+<tr>
+<th>Race / Event</th>
+<th>No.</th>
+<th>Athlete</th>
+<th>Status</th>
+<th>Time / Seconds</th>
+<th>Positions</th>
+<th>Category / Age</th>
+<th>Creating batch</th>
+</tr>
+</thead>
+<tbody>
+<% @results.each do |result| %>
+<tr>
+<td>
+<%= result.race.display_name %>
+<small>
+<%= result.race.event.name %>
+</small>
+</td>
+<td>
+<%= result.race_number || "—" %>
+</td>
+<td>
+<%= result.athlete.full_name %>
+</td>
+<td>
+<%= result.finish_status || "—" %>
+</td>
+<td>
+<%= result.finish_time_display || "—" %>
+<small>
+<%= result.finish_time_seconds %> seconds</small>
+</td>
+<td>Overall <%= result.overall_position || "—" %>
+<small>Category <%= result.category_position || "—" %> · Gender <%= result.gender_position || "—" %>
+</small>
+</td>
+<td>
+<%= result.category %>
+<small>Age <%= result.age_at_race || "—" %>
+</small>
+</td>
+<td>#<%= result.import_batch_id %>
+</td>
+</tr>
+<% end %>
+</tbody>
+</table>
+</div>
+<% if @results.empty? %>
+<p class="empty">No results match this view.</p>
+<% end %>
+<div class="pagination">
+<%= link_to "← Previous", race_results_path(page: @page - 1, q: params[:q]) if @page > 1 %>
+<span>Page <%= @page %>
+</span>
+<%= link_to "Next →", race_results_path(page: @page + 1, q: params[:q]) if @results.size == 25 %>
+</div>
+</section>

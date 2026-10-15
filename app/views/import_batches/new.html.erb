@@ -1,0 +1,88 @@
+<div class="page-heading">
+<div>
+<p class="eyebrow">NEW IMPORT</p>
+<h1>
+<%= @race ? "Upload workbook" : "Import context" %>
+</h1>
+<p>Select the destination before any rows are written.</p>
+</div>
+<%= link_to "← Import history", import_batches_path %>
+</div>
+<ol class="timeline">
+<li class="<%= "active" unless @race %>">1 · Context</li>
+<li class="<%= "active" if @race %>">2 · Upload</li>
+<li>3 · Preview & map</li>
+<li>4 · Queued</li>
+<li>5 · Processing</li>
+<li>6 · Results</li>
+</ol>
+<% if @error %>
+<p class="notice alert" role="alert">
+<%= @error %>
+</p>
+<% end %>
+<% if @race %>
+<section class="card narrow">
+<h2>One race for every result</h2>
+<p class="context-line">
+<%= @race.event.display_name %>
+<br>
+<strong>
+<%= @race.display_name %>
+</strong>
+</p>
+<%= form_with model: ImportBatch.new do |f| %>
+<%= hidden_field_tag :race_id, @race.id %>
+<div class="field">
+<%= f.label :source_file, "XLSX workbook" %>
+<%= f.file_field :source_file, accept: ".xlsx", required: true %>
+<small>Up to 5 MiB · 8 sheets · 10,000 rows per sheet · 128 columns. Values only, without formulas or external links.</small>
+</div>
+<p class="notice">Unused columns are retained for provenance. Upload only the generated fictional examples.</p>
+<%= f.submit "Preview workbook", class: "button" %> <%= link_to "Change context", new_import_batch_path %>
+<% end %>
+</section>
+<% else %>
+<section class="card narrow">
+<h2>Event and race</h2>
+<p>Choose existing records or create both. New records persist together after validation.</p>
+<%= form_with url: context_import_batches_path, data: { controller: "import-context" } do %>
+<div class="field">
+<%= label_tag "import_context_event_id", "Existing event" %>
+<%= select_tag "import_context[event_id]", options_from_collection_for_select(@events, :id, :display_name), include_blank: "Create a new fictional event", data: { import_context_target: "event", action: "change->import-context#update" } %>
+</div>
+<div class="grid-two" data-import-context-target="eventFields">
+<div class="field">
+<%= label_tag "import_context_event_name", "New event name" %>
+<%= text_field_tag "import_context[event_name]", nil, placeholder: "Moonfern Trail Festival" %>
+</div>
+<div class="field">
+<%= label_tag "import_context_event_date", "Event date" %>
+<%= date_field_tag "import_context[event_date]" %>
+</div>
+</div>
+<div class="field">
+<%= label_tag "import_context_race_id", "Existing race" %>
+<select name="import_context[race_id]" id="import_context_race_id" data-import-context-target="race" data-action="change->import-context#update">
+<option value="">Create a new race</option>
+<% @races.each do |race| %>
+<option value="<%= race.id %>" data-event-id="<%= race.event_id %>">
+<%= race.event.name %> · <%= race.display_name %>
+</option>
+<% end %>
+</select>
+</div>
+<div class="grid-two" data-import-context-target="raceFields">
+<div class="field">
+<%= label_tag "import_context_race_name", "New race name" %>
+<%= text_field_tag "import_context[race_name]", nil, placeholder: "Copper Loop" %>
+</div>
+<div class="field">
+<%= label_tag "import_context_race_distance", "Distance" %>
+<%= text_field_tag "import_context[race_distance]", nil, placeholder: "10km" %>
+</div>
+</div>
+<%= submit_tag "Continue to upload", class: "button" %>
+<% end %>
+</section>
+<% end %>

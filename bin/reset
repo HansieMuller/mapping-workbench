@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+require_relative "../config/environment"
+require "sidekiq/api"
+abort "Usage: bin/reset --confirm (stop web and worker first)" unless ARGV == ["--confirm"]
+config = ActiveRecord::Base.connection_db_config
+abort "Reset only supports the dedicated local development database" unless Rails.env.development? && config.database == "mapping_workbench_development" && config.configuration_hash[:host] == "127.0.0.1"
+# The worker must be stopped so queued jobs cannot race with a reset and reused database IDs.
+abort "Stop Sidekiq before resetting" if Sidekiq::ProcessSet.new.size.positive?
+Sidekiq::Queue.new("imports").clear
+Sidekiq::Queue.new("default").clear
+Sidekiq::RetrySet.new.clear
+Sidekiq::ScheduledSet.new.clear
+Sidekiq::DeadSet.new.clear
+# Blobs refuse to purge while attached; remove attachments before orphan blobs.
+ActiveStorage::Attachment.find_each(&:purge)
+ActiveStorage::Blob.find_each(&:purge)
+ActiveRecord::Base.connection_pool.disconnect!
+system("bin/rails", "db:drop", "db:create", "db:migrate", "db:seed", exception: true)
+puts "Fictional data, source workbooks, provenance and audit history reset."

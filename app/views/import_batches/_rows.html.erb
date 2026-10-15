@@ -1,0 +1,70 @@
+<section class="card">
+<div class="section-heading">
+<div>
+<h2>Persisted row outcomes</h2>
+<p>Original cells and mapped values are separate. Failed rows leave no partial domain writes.</p>
+</div>
+<%= link_to "Refresh outcomes", batch, class: "secondary" %>
+</div>
+<% if rows.empty? %>
+<p class="empty">No rows committed yet. Live counters above update as the worker processes the workbook.</p>
+<% else %>
+<div class="table-scroll">
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Classification</th>
+<th>Outcome</th>
+<th>Athlete / Result</th>
+<th>Provenance or error</th>
+</tr>
+</thead>
+<tbody>
+<% rows.each do |row| %>
+<tr>
+<td>
+<%= row.source_sheet %>
+<small>Row <%= row.source_row_number %>
+</small>
+</td>
+<td>
+<%= row.row_type.humanize %>
+</td>
+<td>
+<span class="badge <%= row.status %>">
+<%= row.status.humanize %>
+</span>
+</td>
+<td>
+<%= row.athlete&.full_name || "—" %>
+<small>
+<%= row.race_result ? "Result ##{row.race_result_id}" : "No result created" %>
+</small>
+</td>
+<td>
+<% if row.error_message %>
+<p class="<%= row.status == 'failed' ? 'warning' : '' %>">
+<%= row.error_message %>
+</p>
+<% end %>
+<details>
+<summary>Inspect original cells & mapping</summary>
+<pre>
+<%= JSON.pretty_generate({ original: row.raw_data, mapped: row.normalized_data }) %>
+</pre>
+</details>
+</td>
+</tr>
+<% end %>
+</tbody>
+</table>
+</div>
+<% end %>
+<div class="pagination">
+<%= link_to "← Previous rows", import_batch_path(batch, page: @row_page - 1) if @row_page > 1 %>
+<span>Row page <%= @row_page %>
+</span>
+<%= link_to "Next rows →", import_batch_path(batch, page: @row_page + 1) if rows.size == 50 %>
+</div>
+</section>

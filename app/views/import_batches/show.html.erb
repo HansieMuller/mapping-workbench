@@ -1,0 +1,101 @@
+<div class="page-heading">
+<div>
+<p class="eyebrow">IMPORT / BATCH #<%= @batch.id %>
+</p>
+<h1>
+<%= @batch.file_name %>
+</h1>
+<p>
+<%= @batch.event.display_name %> · <%= @batch.race.display_name %>
+</p>
+</div>
+<%= link_to "← Import history", import_batches_path %>
+</div>
+<ol class="timeline">
+<li>1 · Context</li>
+<li>2 · Upload</li>
+<li class="<%= "active" if @batch.pending_mapping? %>">3 · Preview & map</li>
+<li class="<%= "active" if @batch.queued? %>">4 · Queued</li>
+<li class="<%= "active" if @batch.processing? %>">5 · Processing</li>
+<li class="<%= "active" if @batch.completed? || @batch.completed_with_errors? || @batch.failed? %>">6 · Results</li>
+</ol>
+<section class="card" data-controller="import-progress" data-import-progress-id-value="<%= @batch.id %>" data-import-progress-status-value="<%= @batch.status %>">
+<div class="section-heading">
+<div>
+<h2>Import progress <span class="badge <%= @batch.status %>" data-import-progress-target="status">
+<%= @batch.status.humanize %>
+</span>
+</h2>
+<p data-import-progress-target="connection">Connecting to live updates…</p>
+</div>
+<%= link_to "Download original", download_import_batch_path(@batch), class: "secondary" %>
+</div>
+<div class="metrics">
+<% [["Total rows", :total_rows, "total"], ["Imported", :imported_rows, "imported"], ["Failed", :failed_rows, "failed"], ["Skipped", :skipped_rows, "skipped"]].each do |label, field, target| %>
+<div>
+<span>
+<%= label %>
+</span>
+<strong data-import-progress-target="<%= target %>">
+<%= @batch.public_send(field) %>
+</strong>
+</div>
+<% end %>
+</div>
+<progress max="100" value="<%= @batch.progress_payload[:percentage] %>" data-import-progress-target="bar" aria-label="Import completion">
+</progress>
+<p>
+<span data-import-progress-target="percentage">
+<%= @batch.progress_payload[:percentage] %>
+</span>% complete · Attempt <%= @batch.attempts %> · Uploaded by <%= @batch.user.email %>
+</p>
+<% if @batch.fatal_error %>
+<p class="notice alert">
+<%= @batch.fatal_error %>
+</p>
+<% end %>
+<% if @batch.queued? || @batch.processing? || @batch.failed? %>
+<div class="recovery">
+<p>After an interrupted worker or lost queue delivery, resume uncommitted rows. Existing imported, failed and skipped rows remain checkpoints. A live worker blocks resume.</p>
+<%= button_to "Resume interrupted import", resume_import_batch_path(@batch), class: "secondary" %>
+</div>
+<% end %>
+</section>
+<% if @batch.pending_mapping? %>
+<%= render "mapping", batch: @batch %>
+<% else %>
+<%= render "rows", batch: @batch, rows: @rows %>
+<% end %>
+<section class="card">
+<h2>Batch audit</h2>
+<div class="grid-two">
+<dl>
+<% { "Uploaded" => @batch.created_at, "Queued" => @batch.queued_at, "Started" => @batch.started_at, "Heartbeat" => @batch.heartbeat_at, "Completed" => @batch.completed_at }.each do |label, time| %>
+<dt>
+<%= label %>
+</dt>
+<dd>
+<%= time&.strftime("%Y-%m-%d %H:%M:%S") || "—" %>
+</dd>
+<% end %>
+</dl>
+<div>
+<p>Latest 25 batch changes. Domain changes are also versioned under the uploader's identity.</p>
+<ul class="audit-list">
+<% @versions.each do |version| %>
+<li>
+<strong>
+<%= version.event %>
+</strong> · <%= version.whodunnit || "Local setup" %> · <%= version.created_at.strftime("%H:%M:%S") %>
+<details>
+<summary>Changed attributes</summary>
+<pre>
+<%= JSON.pretty_generate(version.object_changes || {}) %>
+</pre>
+</details>
+</li>
+<% end %>
+</ul>
+</div>
+</div>
+</section>

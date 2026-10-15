@@ -1,7 +1,10 @@
 class ApplicationController < ActionController::Base
-  # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
-  allow_browser versions: :modern
+  include Authentication
+  before_action :set_paper_trail_whodunnit
 
-  # Changes to the importmap will invalidate the etag for HTML responses
-  stale_when_importmap_changes
+  private
+
+  def user_for_paper_trail
+    "User:#{current_user.id}" if current_user
+  end
 end

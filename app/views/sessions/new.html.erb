@@ -1,0 +1,17 @@
+<section class="card sign-in">
+<p class="eyebrow">LOCAL OPERATOR ACCESS</p>
+<h1>Sign in</h1>
+<p>Use <code>operator@example.test</code> and the local password created by <code>bin/setup</code>.</p>
+<%= form_with url: session_path do |f| %>
+<div class="field">
+<%= f.label :email %>
+<%= f.email_field :email, required: true, autocomplete: "username" %>
+</div>
+<div class="field">
+<%= f.label :password %>
+<%= f.password_field :password, required: true, autocomplete: "current-password" %>
+</div>
+<%= f.submit "Sign in", class: "button" %>
+<% end %>
+<small>Credentials remain local. All demonstration people and events are fictional.</small>
+</section>

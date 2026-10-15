@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17.11
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports: ["127.0.0.1:5547:5432"]
+    volumes: ["workbench_pg:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  redis:
+    image: redis:7.2.13
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["127.0.0.1:6387:6379"]
+    volumes: ["workbench_redis:/data"]
+volumes:
+  workbench_pg:
+  workbench_redis:
