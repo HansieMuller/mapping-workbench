@@ -106,7 +106,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_104416) do
     t.index ["race_id"], name: "index_import_batches_on_race_id"
     t.index ["status"], name: "index_import_batches_on_status"
     t.index ["user_id"], name: "index_import_batches_on_user_id"
-    t.check_constraint "status::text = ANY (ARRAY['pending_mapping'::character varying, 'queued'::character varying, 'processing'::character varying, 'completed'::character varying, 'completed_with_errors'::character varying, 'failed'::character varying]::text[])", name: "import_batches_valid_status"
+    t.check_constraint "status::text = ANY (ARRAY['pending_mapping'::character varying::text, 'queued'::character varying::text, 'processing'::character varying::text, 'completed'::character varying::text, 'completed_with_errors'::character varying::text, 'failed'::character varying::text])", name: "import_batches_valid_status"
     t.check_constraint "total_rows >= 0 AND imported_rows >= 0 AND failed_rows >= 0 AND skipped_rows >= 0", name: "import_batches_nonnegative_counts"
   end
 
@@ -128,7 +128,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_104416) do
     t.index ["import_batch_id", "status"], name: "index_import_rows_on_import_batch_id_and_status"
     t.index ["import_batch_id"], name: "index_import_rows_on_import_batch_id"
     t.index ["race_result_id"], name: "index_import_rows_on_race_result_id"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'imported'::character varying, 'failed'::character varying, 'skipped'::character varying]::text[])", name: "import_rows_valid_status"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'imported'::character varying::text, 'failed'::character varying::text, 'skipped'::character varying::text])", name: "import_rows_valid_status"
   end
 
   create_table "memberships", force: :cascade do |t|
