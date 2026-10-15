@@ -25,4 +25,4 @@ The default source branch and importer call graph were inspected before implemen
 | Audit uploader, history/search/pagination, details/errors | Retain | PaperTrail attribution and escaped server/DOM output |
 | Original branding, source spreadsheets, unrelated APIs/CMS/deployment | Exclude | Fresh fictional domain and fixtures only; no production integrations |
 
-Implementation is on the feature branch. See evidence.md for verification results and limits; the public main branch remains the minimal scaffold pending review.
+See [verification evidence](evidence.md) for actual results and limitations. The implementation and review history are recorded in [PR #4](https://github.com/HansieMuller/mapping-workbench/pull/4).

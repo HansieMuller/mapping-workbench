@@ -17,9 +17,9 @@ Verification date: 2026-10-15. The final local command is `MW_DATABASE_PORT=5547
 | Gitleaks 8.30.1 | No leaks found in full fresh history or clean intended-file export, including archives |
 | Reset smoke check | Old attached source and import data removed; fresh seed and private password recreated |
 
-Hosted verification runs the same `bin/ci` command on the review PR. The PR's Checks tab and [workflow runs](https://github.com/HansieMuller/mapping-workbench/actions/workflows/ci.yml) retain the actual hosted outcomes and downloadable browser evidence. Do not treat a local pass as a hosted pass.
+Hosted verification runs the same `bin/ci` command on pull requests and pushes to `main`. The [workflow runs](https://github.com/HansieMuller/mapping-workbench/actions/workflows/ci.yml) retain actual hosted outcomes and downloadable browser evidence. Do not treat a local pass as a hosted pass.
 
-The [complete hosted campaign](https://github.com/HansieMuller/mapping-workbench/actions/runs/38730881032) passed for implementation commit `7dac0e2`: 47 PostgreSQL tests / 425 assertions and 3 Chrome tests / 41 assertions, with zero failures, errors or skips. Autoloading, 79-file RuboCop, Brakeman, both dependency audits and publication checks also passed. The [initial main scaffold campaign](https://github.com/HansieMuller/mapping-workbench/actions/runs/38722229732) separately passed. The PR remains open; its latest Checks tab verifies subsequent documentation-only commits.
+The [complete hosted campaign](https://github.com/HansieMuller/mapping-workbench/actions/runs/38730881032) passed for implementation commit `7dac0e2`: 47 PostgreSQL tests / 425 assertions and 3 Chrome tests / 41 assertions, with zero failures, errors or skips. Autoloading, 79-file RuboCop, Brakeman, both dependency audits and publication checks also passed. The [initial main scaffold campaign](https://github.com/HansieMuller/mapping-workbench/actions/runs/38722229732) separately passed. Later PR checks and `main` workflow runs verify subsequent commits.
 
 Genuine screenshots from the synthetic system-test context: [mapping](screenshots/mapping.png), [outcomes](screenshots/outcomes.png), [results](screenshots/results.png), and [mobile history](screenshots/mobile-history.png). Each was visually reviewed before publication.
 
@@ -55,4 +55,4 @@ The original importer was inspected on its actual default branch. No changes wer
 - Raw unused columns are retained locally. Use fictional input and reset to remove it.
 - Public deployment and scale are untested. Browser evidence is Chrome only; load tests and cross-browser campaigns were not run.
 - Source investigation could not use the JetBrains backend because its IDE service was unavailable; the source Ruby version was also absent for LSP. Targeted call tracing was used there. LSP symbol lookup worked in the new application.
-- No new redistribution license or exclusive-authorship claim is made. This authorized derivative stays open for independent review without merge or deployment.
+- No new redistribution license or exclusive-authorship claim is made. This authorized derivative remains a local demonstration without production deployment.

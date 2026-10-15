@@ -4,7 +4,7 @@ A spreadsheet import becomes a reconciliation problem when one workbook mixes ra
 
 MappingWorkbench is a standalone Rails application for that problem. Operators select event/race context, inspect every XLSX worksheet, correct headers, map 17 destinations, queue a background import and inspect live progress, relational results and original row provenance. All included people, identifiers, clubs and events are fictional.
 
-The public `main` branch intentionally contains the initial runnable scaffold. The complete application is on `feat/complete-importer` in [review PR #4](https://github.com/HansieMuller/mapping-workbench/pull/4); it has not been merged or deployed.
+The implementation and verification history are recorded in [PR #4](https://github.com/HansieMuller/mapping-workbench/pull/4). This is a local portfolio demonstration, with no production deployment.
 
 ![Per-sheet mapping](docs/screenshots/mapping.png)
 
@@ -13,7 +13,7 @@ The public `main` branch intentionally contains the initial runnable scaffold. T
 Install Ruby **4.0.7**, Docker Compose and Chrome (for browser tests). The Ruby gems are pinned in `Gemfile` and the fresh lockfile. PostgreSQL **17.11** and Redis **7.2.13** are pinned in Compose.
 
 ```sh
-git clone --branch feat/complete-importer https://github.com/HansieMuller/mapping-workbench.git
+git clone https://github.com/HansieMuller/mapping-workbench.git
 cd mapping-workbench
 docker compose -p mapping-workbench up -d --wait
 export MW_DATABASE_PORT=5547
