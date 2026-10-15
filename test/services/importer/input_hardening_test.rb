@@ -118,6 +118,38 @@ class Importer::InputHardeningTest < ActiveSupport::TestCase
     file&.close!
   end
 
+  test "unreferenced worksheet parts cannot shadow the selected relationship" do
+    source = Rails.root.join("test/fixtures/files/success.xlsx")
+    file = Tempfile.new([ "shadow-sheet", ".xlsx" ])
+    Zip::File.open(file.path, create: true) do |target|
+      Zip::File.open(source) do |original|
+        original.each { |entry| target.get_output_stream(entry.name) { |io| io.write(entry.get_input_stream.read) } }
+        data = original.get_entry("xl/worksheets/sheet1.xml").get_input_stream.read.sub("Luma Quill", "Synthetic Shadow Person")
+        target.get_output_stream("aaa/worksheets/sheet1.xml") { |io| io.write(data) }
+      end
+    end
+    error = assert_raises(Importer::WorkbookGuard::Error) { Importer::WorkbookGuard.validate!(file.path) }
+    assert_match(/Ambiguous worksheet archive parts/, error.message)
+  ensure
+    file&.close!
+  end
+
+  test "Roo metadata suffix matches cannot bypass canonical guards" do
+    source = Rails.root.join("test/fixtures/files/success.xlsx")
+    [ "workbook.xml", "workbook.xml.rels", "styles.xml", "sharedStrings.xml" ].each do |name|
+      file = Tempfile.new([ "shadow-metadata", ".xlsx" ])
+      Zip::File.open(file.path, create: true) do |target|
+        Zip::File.open(source) do |original|
+          original.each { |entry| target.get_output_stream(entry.name) { |io| io.write(entry.get_input_stream.read) } }
+          target.get_output_stream("aaa/#{name}") { |io| io.write("<sst><si><t>#{'x' * 5000}</t></si></sst>") }
+        end
+      end
+      error = assert_raises(Importer::WorkbookGuard::Error) { Importer::WorkbookGuard.validate!(file.path) }
+      assert_match(/metadata parts/, error.message)
+      file.close!
+    end
+  end
+
   test "each configured workbook resource limit is enforced on real archives" do
     source = Rails.root.join("test/fixtures/files/success.xlsx")
     file = Tempfile.new([ "byte-limit", ".xlsx" ])

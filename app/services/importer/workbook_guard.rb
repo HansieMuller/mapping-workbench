@@ -32,6 +32,7 @@ module Importer
         raise Error, "Duplicate archive paths" if names.map(&:downcase).uniq.size != names.size
         raise Error, "Missing workbook XML" unless names.include?("xl/workbook.xml") && names.include?("[Content_Types].xml") && names.include?("xl/_rels/workbook.xml.rels")
         @names = names
+        validate_reader_parts!
         zip.each do |entry|
           validate_path!(entry)
           next if entry.directory?
@@ -49,7 +50,7 @@ module Importer
           validate_workbook!(doc) if entry.name == "xl/workbook.xml"
           validate_worksheet_targets!(doc) if entry.name == "xl/_rels/workbook.xml.rels"
           validate_sheet!(doc) if doc.at_xpath("//*[local-name()='sheetData']")
-          if entry.name == "xl/sharedStrings.xml"
+          if doc.at_xpath("/*[local-name()='sst']")
             doc.xpath("//*[local-name()='si']").each { |cell| validate_cell!(cell) }
           end
         end
@@ -61,6 +62,20 @@ module Importer
     end
 
     private
+
+    # Roo finds these parts by suffix rather than OPC relationships. Require canonical,
+    # unique matches so the reader cannot substitute metadata that was guarded differently.
+    def validate_reader_parts!
+      {
+        /workbook.xml$/ => "xl/workbook.xml",
+        /workbook.xml.rels$/ => "xl/_rels/workbook.xml.rels",
+        /sharedstrings.xml$/i => "xl/sharedStrings.xml",
+        /styles.xml$/i => "xl/styles.xml"
+      }.each do |pattern, canonical|
+        matches = @names.select { |name| pattern.match?(name) }
+        raise Error, "Noncanonical or ambiguous workbook metadata parts" unless matches.empty? || matches == [ canonical ]
+      end
+    end
 
     def validate_path!(entry)
       name = entry.name
@@ -92,6 +107,9 @@ module Importer
       relationships.each do |rel|
         target = rel["Target"].to_s.delete_prefix("/xl/")
         raise Error, "Nonstandard worksheet targets are unsupported" unless target.match?(%r{\Aworksheets/[A-Za-z0-9_-]+\.xml\z}) && @names.include?("xl/#{target}")
+        # Mirror Roo's suffix regex, including its wildcard dot, so another part cannot shadow it.
+        matches = @names.select { |name| Regexp.new("#{rel['Target']}$").match?("/#{name}") }
+        raise Error, "Ambiguous worksheet archive parts" unless matches == [ "xl/#{target}" ]
       end
     end
 
