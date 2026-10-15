@@ -28,7 +28,7 @@ jobs:
       MW_DATABASE_PASSWORD: local-ci-only
       MW_REDIS_URL: redis://127.0.0.1:6387/1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ruby/setup-ruby@v1
