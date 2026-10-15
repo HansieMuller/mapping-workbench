@@ -6,7 +6,7 @@ Each worksheet has an independently confirmed header row and index-to-destinatio
 
 The 17 destinations are race number, first name, last name, full name, ID number, permanent number, date of birth, gender, email, mobile number, club, finish status, finish time, overall position, category, category position and gender position. Passport remains service-level support with tests; it is not an original or public dropdown destination.
 
-The UI disables duplicate destinations within one sheet and reports missing prerequisites. Server validation is authoritative: reject non-object maps, unknown sheets, missing/crafted indexes, unsupported destinations and duplicate fields. At least one sheet must map finish time. Sheets mapping finish time or finish status must also map ID number, full name, or both first/last names. The finish-status-only prerequisite is an additional defensive guard. Headers/mappings become immutable when queued.
+The UI disables duplicate destinations within one sheet and reports missing prerequisites. Server validation is authoritative: reject non-object maps, unknown sheets, missing/crafted indexes, unsupported destinations and duplicate fields. Header correction carries unsaved choices into a structurally validated draft, preserves sheets whose header row is unchanged and resets suggestions only on corrected sheets. Final result prerequisites are deferred for that draft and enforced before queuing: at least one sheet must map finish time, and sheets mapping finish time or finish status must map ID number, full name, or both first/last names. The finish-status-only prerequisite is an additional defensive guard. Headers/mappings become immutable when queued.
 
 ## Typed values and classification
 

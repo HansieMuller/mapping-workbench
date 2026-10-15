@@ -6,8 +6,8 @@ Verification date: 2026-10-15. The final local command is `MW_DATABASE_PORT=5547
 
 | Check | Actual result |
 | --- | --- |
-| PostgreSQL Rails tests, including separate-session races | 44 runs, 357 assertions, 0 failures, 0 errors, 0 skips |
-| Chrome / real Redis, Sidekiq and ActionCable system flows | 2 runs, 33 assertions, 0 failures, 0 errors, 0 skips |
+| PostgreSQL Rails tests, including separate-session races | 46 runs, 419 assertions, 0 failures, 0 errors, 0 skips |
+| Chrome / real Redis, Sidekiq and ActionCable system flows | 3 runs, 41 assertions, 0 failures, 0 errors, 0 skips |
 | `zeitwerk:check` | All application constants autoloaded |
 | RuboCop | 79 files, 0 offenses |
 | Brakeman 8.1.0 | 0 errors, 0 security warnings |
@@ -29,7 +29,7 @@ The campaign uses Ruby 4.0.7, Rails 8.1.4, PostgreSQL 17.11, Redis 7.2.13, Sidek
 
 A browser-harness issue was traced with Redis MONITOR: Turbo lazily installs ActionCable's in-process test adapter after Cable first loads. The second browser test was receiving direct snapshots while missing real Redis publications. The system harness now preserves the real Redis adapter after framework setup and asserts it for each case. The application was not given a polling shortcut to hide that failure.
 
-Independent review also drove regressions for worksheet relationship/ID bypasses, Roo regex and suffix-shadowed archive parts, typed Excel durations beyond 24 hours, malformed mapping root shapes, PostgreSQL position overflow, lost database-session ownership, stale/reconnected progress screens and leap-day birthday parity.
+Independent review also drove regressions for worksheet relationship/ID bypasses, Roo regex and suffix-shadowed archive parts, typed Excel durations beyond 24 hours, malformed wizard parameter shapes, header correction retaining unsaved mappings on other sheets, PostgreSQL position overflow, lost database-session ownership, stale/reconnected progress screens and leap-day birthday parity.
 
 The fixtures are freshly generated fictional workbooks. The system campaign uses real Chrome, PostgreSQL, Redis, a separately spawned open-source Sidekiq process, authenticated sessions, CSRF-protected forms and ActionCable connections. It does not substitute `perform_now` for the browser's worker path.
 
