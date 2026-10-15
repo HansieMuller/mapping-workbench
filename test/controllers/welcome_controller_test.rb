@@ -9,7 +9,7 @@ class WelcomeControllerTest < ActionDispatch::IntegrationTest
     sign_in
     get root_path
     assert_response :success
-    assert_select "h1", "MappingWorkbench"
+    assert_select "h1", "Workbook import history"
     delete session_path
     get root_path
     assert_redirected_to new_session_path

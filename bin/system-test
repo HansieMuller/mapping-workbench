@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+require "fileutils"
+FileUtils.chdir(File.expand_path("..", __dir__))
+FileUtils.mkdir_p("tmp")
+env = { "RAILS_ENV" => "test", "MW_REAL_WORKER" => "1", "MW_REDIS_URL" => ENV.fetch("MW_REDIS_URL", "redis://127.0.0.1:6387/1") }
+worker = Process.spawn(env, "bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml", out: "tmp/system-sidekiq.log", err: [:child, :out])
+begin
+  success = system(env, "bin/rails", "test:system")
+ensure
+  Process.kill("TERM", worker) rescue Errno::ESRCH
+  Process.wait(worker)
+end
+exit(success ? 0 : 1)

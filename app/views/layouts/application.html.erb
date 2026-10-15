@@ -1,12 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>MappingWorkbench</title>
+    <title>MappingWorkbench · Fictional data operations</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <%= csrf_meta_tags %>
-    <%= csp_meta_tag %>
+<%= csp_meta_tag %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
-  <body><%= yield %></body>
+  <body>
+    <header class="site-header">
+      <%= link_to root_path, class: "brand" do %>
+<span class="brand-mark">MW</span>
+<span>MappingWorkbench<small>FICTIONAL DATA OPERATIONS</small>
+</span>
+<% end %>
+      <% if current_user %>
+        <nav aria-label="Main navigation">
+<%= link_to "Import history", import_batches_path %>
+<%= link_to "Athletes", athletes_path %>
+<%= link_to "Results", race_results_path %>
+</nav>
+        <%= button_to "Sign out", session_path, method: :delete, class: "quiet" %>
+      <% end %>
+    </header>
+    <main>
+      <% flash.each do |kind, message| %>
+<div role="<%= kind == "alert" ? "alert" : "status" %>" class="notice <%= kind %>">
+<%= message %>
+</div>
+<% end %>
+      <%= yield %>
+    </main>
+    <footer>MappingWorkbench · Local portfolio demonstration · Synthetic identities only</footer>
+  </body>
 </html>

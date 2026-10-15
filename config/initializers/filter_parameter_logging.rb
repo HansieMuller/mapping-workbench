@@ -6,3 +6,7 @@
 Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc
 ]
+
+Rails.application.config.filter_parameters += %i[source_file mapping_config preview_data raw_data normalized_data]
+
+Rails.application.config.filter_parameters += %i[object object_changes]

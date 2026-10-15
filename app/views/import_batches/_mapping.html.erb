@@ -1,0 +1,83 @@
+<section class="card">
+<h2>Confirm the header rows</h2>
+<p>Suggestions use explicit header aliases. Review the original rows, especially when detection is uncertain. Changing a header resets that sheet's suggestions.</p>
+<%= form_with url: headers_import_batch_path(batch), method: :patch do %>
+<div class="grid-two">
+<% batch.preview_data.fetch("sheets").each do |sheet| %>
+<div class="field">
+<%= label_tag "header_rows_#{sheet['key']}", "#{sheet['name']} header row" %>
+<%= number_field_tag "header_rows[#{sheet['key']}]", sheet["header_row"], min: 1, max: sheet["header_row"] + sheet["total_rows"], required: true %>
+<% if sheet["uncertain"] %>
+<small class="warning">Uncertain detection. Confirm or correct this row before importing.</small>
+<% end %>
+<details>
+<summary>Inspect candidate rows</summary>
+<ul>
+<% sheet["candidates"].each do |candidate| %>
+<li>
+<strong>Row <%= candidate["row"] %>
+</strong>: <%= candidate["values"].first(8).join(" · ") %> (<%= candidate["matches"] %> known headers)</li>
+<% end %>
+</ul>
+</details>
+</div>
+<% end %>
+</div>
+<%= submit_tag "Update headers and preview", class: "secondary" %>
+<% end %>
+</section>
+<%= form_with url: confirm_mapping_import_batch_path(batch), method: :patch, data: { controller: "mapping-form", action: "change->mapping-form#validate submit->mapping-form#submit" } do %>
+<% batch.preview_data.fetch("sheets").each do |sheet| %>
+<section class="card sheet" data-controller="import-mapping" data-mapping-form-target="sheet" data-sheet-name="<%= sheet['name'] %>">
+<div class="section-heading">
+<div>
+<p class="eyebrow">WORKSHEET <%= sheet['key'].to_i + 1 %>
+</p>
+<h2>
+<%= sheet['name'] %>
+</h2>
+</div>
+<span>
+<%= sheet['total_rows'] %> rows · Header row <%= sheet['header_row'] %>
+</span>
+</div>
+<div class="table-scroll mapping-table">
+<table>
+<thead>
+<tr>
+<% sheet["headers"].each do |header| %>
+<th>
+<span class="column-letter">
+<%= header["letter"] %>
+</span>
+<strong>
+<%= header["name"].presence || "Unnamed column" %>
+</strong>
+<%= select_tag "mapping_config[sheets][#{sheet['key']}][#{header['index']}]", options_for_select([["Unused", "unused"]] + Importer::HeaderMapper::FIELDS.map { |f| [f.humanize, f] }, batch.mapping_config.dig("sheets", sheet["key"], header["index"].to_s)), aria: { label: "#{sheet['name']} column #{header['letter']} destination" }, data: { import_mapping_target: "select", action: "change->import-mapping#update" } %>
+</th>
+<% end %>
+</tr>
+</thead>
+<tbody>
+<% sheet["rows"].each do |row| %>
+<tr>
+<% sheet["headers"].each do |header| %>
+<td>
+<%= row[header["index"]].presence || "—" %>
+</td>
+<% end %>
+</tr>
+<% end %>
+</tbody>
+</table>
+</div>
+</section>
+<% end %>
+<section class="card">
+<h2>Ready to process</h2>
+<p>Each result sheet needs identity fields. At least one sheet must map finish time. Unused columns remain in the private row provenance.</p>
+<p role="alert" class="warning" data-mapping-form-target="errors">
+</p>
+<%= submit_tag "Confirm mappings and start import", class: "button", data: { mapping_form_target: "button" } %>
+</section>
+<% end %>

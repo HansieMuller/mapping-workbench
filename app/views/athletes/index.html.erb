@@ -1,0 +1,60 @@
+<div class="page-heading">
+<div>
+<p class="eyebrow">RELATIONAL DOMAIN</p>
+<h1>Athletes</h1>
+<p>Profiles from results and registration sheets, with fill-missing-only updates.</p>
+</div>
+</div>
+<section class="card">
+<%= form_with url: athletes_path, method: :get, class: "search" do |f| %>
+<%= f.search_field :q, value: params[:q], placeholder: "Search fictional name or ID", aria: { label: "Search athletes" } %>
+<%= f.submit "Search", class: "secondary" %>
+<% end %>
+<div class="table-scroll">
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Identity</th>
+<th>Date of birth</th>
+<th>Club memberships</th>
+<th>Contact</th>
+</tr>
+</thead>
+<tbody>
+<% @athletes.each do |athlete| %>
+<tr>
+<td>
+<%= athlete.full_name || "Unnamed identity" %>
+<small>
+<%= athlete.permanent_number %>
+</small>
+</td>
+<td>
+<%= athlete.id_number || athlete.passport_number || "Name/birth or batch-local profile" %>
+</td>
+<td>
+<%= athlete.date_of_birth || "—" %>
+</td>
+<td>
+<%= athlete.clubs.map(&:name).join(", ") %>
+</td>
+<td>
+<%= athlete.email %>
+<small>
+<%= athlete.mobile_number %>
+</small>
+</td>
+</tr>
+<% end %>
+</tbody>
+</table>
+</div>
+<p class="empty" <%= "hidden" unless @athletes.empty? %>>No athletes match this view.</p>
+<div class="pagination">
+<%= link_to "← Previous", athletes_path(page: @page - 1, q: params[:q]) if @page > 1 %>
+<span>Page <%= @page %>
+</span>
+<%= link_to "Next →", athletes_path(page: @page + 1, q: params[:q]) if @athletes.size == 25 %>
+</div>
+</section>
