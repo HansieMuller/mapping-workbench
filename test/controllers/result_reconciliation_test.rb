@@ -100,6 +100,20 @@ class ResultReconciliationTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a status-only numbered correction preserves both time values when mapped time is blank" do
+    import_workbook(RESULT_FIELDS, [ COMPLETE_ROW ])
+    result = RaceResult.find_by!(race_number: "501")
+    before = result.attributes.except("finish_status", "updated_at")
+    correction = import_workbook(RESULT_FIELDS.first(5), [ COMPLETE_ROW.first(3) + [ nil, "DQ" ] ])
+    assert_equal before, result.reload.attributes.except("finish_status", "updated_at")
+    assert_equal "disqualified", result.finish_status
+    row = correction.import_rows.sole
+    assert row.normalized_data.key?("finish_time")
+    assert_nil row.normalized_data["finish_time"]
+    assert_equal "finish_result", row.row_type
+    assert_equal "DQ", row.raw_data[4]["value"]
+  end
+
   test "invalid status rolls back a new graph and later valid workbook rows succeed" do
     fields = %w[race_number full_name id_number finish_time finish_status club email]
     rows = [ [ "701", "Rejected Willow", "0000000000071", "00:30:00", "INVALID_STATUS", "Rejected Club", "rejected@example.test" ],
