@@ -1,0 +1,17 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  host: 127.0.0.1
+  port: <%= ENV.fetch("MW_DATABASE_PORT", 5432) %>
+  username: <%= ENV.fetch("MW_DATABASE_USER", ENV.fetch("USER", "postgres")) %>
+  password: <%= ENV["MW_DATABASE_PASSWORD"] %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS", 10) %>
+development:
+  <<: *default
+  database: mapping_workbench_development
+test:
+  <<: *default
+  database: mapping_workbench_test
+production:
+  <<: *default
+  database: mapping_workbench_production
