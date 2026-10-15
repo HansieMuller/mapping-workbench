@@ -74,4 +74,21 @@ class WorkbenchFlowTest < ApplicationSystemTestCase
     assert_includes states, "processing"
     assert_includes states, "completed"
   end
+
+  test "header correction retains unsaved mappings on the other worksheets" do
+    browser_sign_in
+    batch = attach_workbook(create_batch)
+    visit import_batch_path(batch)
+    find("select[aria-label='Profiles column A destination']").select("Unused")
+    fill_in "Results header row", with: "4"
+    click_button "Update headers and preview"
+    assert_text "Headers updated. Review the refreshed mappings."
+    assert_equal "unused", find("select[aria-label='Profiles column A destination']").value
+    assert_equal "unused", batch.reload.mapping_config.dig("sheets", "1", "0")
+    assert_field "Results header row", with: "4"
+    fill_in "Results header row", with: "3"
+    click_button "Update headers and preview"
+    assert_selector "select[aria-label='Results column F destination'] option:checked", text: "Finish time"
+    assert_equal "unused", find("select[aria-label='Profiles column A destination']").value
+  end
 end

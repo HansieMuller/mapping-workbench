@@ -48,5 +48,22 @@ module Importer
       else value.to_s.strip
       end
     end
+
+    # Header correction is still a draft: preserve other sheets' operator choices,
+    # validate their structure, and enforce result prerequisites when finally queued.
+    def self.update_headers!(batch, rows, mappings: nil)
+      batch.with_lock do
+        raise MappingValidator::Error, "Headers are locked once queued" unless batch.pending_mapping?
+        previous = batch.preview_data.fetch("sheets").to_h { |sheet| [ sheet.fetch("key"), sheet.fetch("header_row") ] }
+        draft = MappingValidator.validate!(batch.preview_data, mappings || batch.mapping_config.deep_dup, prerequisites: false)
+        preview = call(batch, header_rows: previous.merge(rows))
+        updated = MappingValidator.suggest(preview)
+        preview.fetch("sheets").each do |sheet|
+          key = sheet.fetch("key")
+          updated["sheets"][key] = draft.fetch("sheets").fetch(key) if sheet.fetch("header_row") == previous.fetch(key)
+        end
+        batch.update!(preview_data: preview, mapping_config: updated)
+      end
+    end
   end
 end

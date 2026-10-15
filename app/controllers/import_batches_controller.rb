@@ -24,7 +24,9 @@ class ImportBatchesController < ApplicationController
 
   def create
     race = Race.find(params.require(:race_id))
-    @batch = Importer::Upload.call(current_user, race, params.dig(:import_batch, :source_file))
+    upload = params[:import_batch]
+    file = upload[:source_file] if upload.is_a?(ActionController::Parameters)
+    @batch = Importer::Upload.call(current_user, race, file)
     redirect_to import_batch_path(@batch), notice: "Workbook inspected. Confirm each worksheet's header and mapping."
   rescue Importer::WorkbookGuard::Error, ActiveRecord::RecordNotFound, ActionController::ParameterMissing => error
     @error = error.is_a?(Importer::WorkbookGuard::Error) ? error.message : "Select a race before uploading"
@@ -39,14 +41,14 @@ class ImportBatchesController < ApplicationController
   end
 
   def update_headers
-    @batch.with_lock do
-      raise Importer::MappingValidator::Error, "Headers are locked once queued" unless @batch.pending_mapping?
-      rows = params.require(:header_rows).permit(*@batch.preview_data.fetch("sheets").map { |s| s.fetch("key") }).to_h
-      preview = Importer::WorkbookPreview.call(@batch, header_rows: rows)
-      @batch.update!(preview_data: preview, mapping_config: Importer::MappingValidator.suggest(preview))
-    end
+    headers = params.require(:header_rows)
+    raise Importer::MappingValidator::Error, "Header rows must be an object" unless headers.is_a?(ActionController::Parameters)
+    mapping = params[:mapping_config]
+    raise Importer::MappingValidator::Error, "Mappings must be an object" if mapping && !mapping.is_a?(ActionController::Parameters)
+    rows = headers.permit(*@batch.preview_data.fetch("sheets").map { |s| s.fetch("key") }).to_h
+    Importer::WorkbookPreview.update_headers!(@batch, rows, mappings: mapping&.to_unsafe_h)
     redirect_to @batch, notice: "Headers updated. Review the refreshed mappings."
-  rescue Importer::MappingValidator::Error, Importer::WorkbookGuard::Error, ArgumentError => error
+  rescue Importer::MappingValidator::Error, Importer::WorkbookGuard::Error, ActionController::ParameterMissing, ArgumentError => error
     redirect_to @batch, alert: error.message
   end
 
@@ -84,6 +86,8 @@ class ImportBatchesController < ApplicationController
   end
 
   def context_params
-    params.fetch(:import_context, ActionController::Parameters.new).permit(:event_id, :race_id, :event_name, :event_date, :race_name, :race_distance)
+    context = params.fetch(:import_context, ActionController::Parameters.new)
+    raise Importer::ImportContextResolver::Error, "Import context must be an object" unless context.is_a?(ActionController::Parameters)
+    context.permit(:event_id, :race_id, :event_name, :event_date, :race_name, :race_distance)
   end
 end

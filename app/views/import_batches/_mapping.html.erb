@@ -1,7 +1,7 @@
 <section class="card">
 <h2>Confirm the header rows</h2>
 <p>Suggestions use explicit header aliases. Review the original rows, especially when detection is uncertain. Changing a header resets that sheet's suggestions.</p>
-<%= form_with url: headers_import_batch_path(batch), method: :patch do %>
+<%= form_with url: headers_import_batch_path(batch), method: :patch, data: { controller: "header-preview", action: "submit->header-preview#preserveMappings" } do %>
 <div class="grid-two">
 <% batch.preview_data.fetch("sheets").each do |sheet| %>
 <div class="field">

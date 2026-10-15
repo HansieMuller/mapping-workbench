@@ -121,4 +121,49 @@ class ImportBatchesControllerTest < ActionDispatch::IntegrationTest
       assert_equal "pending_mapping", batch.reload.status
     end
   end
+
+  test "header correction preserves unchanged sheet mappings and validates drafts" do
+    batch = attach_workbook(create_batch)
+    draft = batch.mapping_config.deep_dup
+    draft["sheets"]["1"]["0"] = "unused"
+    patch headers_import_batch_path(batch), params: { header_rows: { "0" => "4" }, mapping_config: draft }
+    assert_redirected_to batch
+    assert_equal 4, batch.reload.preview_data.fetch("sheets").first.fetch("header_row")
+    assert_equal draft["sheets"]["1"], batch.mapping_config["sheets"]["1"]
+    assert_equal "unused", batch.mapping_config["sheets"]["0"]["5"]
+    assert_equal "pending_mapping", batch.status
+    patch confirm_mapping_import_batch_path(batch), params: { mapping_config: batch.mapping_config }
+    assert_redirected_to batch
+    assert_match(/Map finish time/, flash[:alert])
+    assert_equal "pending_mapping", batch.reload.status
+    original = batch.mapping_config.deep_dup
+    tampered = original.deep_dup
+    tampered["sheets"]["1"]["999"] = "race_id"
+    patch headers_import_batch_path(batch), params: { header_rows: { "0" => "3" }, mapping_config: tampered }
+    assert_redirected_to batch
+    assert_equal original, batch.reload.mapping_config
+    assert_equal 4, batch.preview_data.fetch("sheets").first.fetch("header_row")
+  end
+
+  test "malformed wizard parameter roots return understandable errors" do
+    batch = attach_workbook(create_batch)
+    original = batch.preview_data.deep_dup
+    [ "crafted", [ "crafted" ] ].each do |shape|
+      patch headers_import_batch_path(batch), params: { header_rows: shape }
+      assert_redirected_to batch
+      assert_match(/must be an object/, flash[:alert])
+      assert_equal original, batch.reload.preview_data
+      patch headers_import_batch_path(batch), params: { header_rows: { "0" => "3" }, mapping_config: shape }
+      assert_redirected_to batch
+      assert_match(/must be an object/, flash[:alert])
+      post context_import_batches_path, params: { import_context: shape }
+      assert_response :unprocessable_entity
+      assert_select ".notice", /must be an object/
+      assert_no_difference "ImportBatch.count" do
+        post import_batches_path, params: { race_id: @race.id, import_batch: shape }
+        assert_response :unprocessable_entity
+        assert_select ".notice", /Choose an XLSX workbook/
+      end
+    end
+  end
 end
