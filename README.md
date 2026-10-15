@@ -51,7 +51,7 @@ bin/ci
 
 It runs PostgreSQL tests and competing-session regressions, Chrome system tests with a separate real Redis/Sidekiq worker, autoload checks, RuboCop, Brakeman, gem and JavaScript dependency audits, and publication checks. Chrome screenshots are written to ignored `tmp/screenshots`. GitHub Actions runs the same command on `main` and pull requests, with pinned PostgreSQL and Redis services.
 
-See [verification evidence](docs/evidence.md), [feature parity](docs/parity.md), [architecture](docs/architecture.md), and [mapping and identity rules](docs/rules.md).
+See [verification evidence](docs/evidence.md), [feature parity](docs/parity.md), [architecture](docs/architecture.md), [mapping and identity rules](docs/rules.md), and the [changelog](CHANGELOG.md).
 
 ## Reset and stop
 
