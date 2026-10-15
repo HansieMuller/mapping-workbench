@@ -22,3 +22,5 @@ end
 class ActiveSupport::TestCase
   include WorkbenchTestData
 end
+
+require_relative "support/workbook_helpers"
