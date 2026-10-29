@@ -12,7 +12,7 @@ gem "roo", "3.0.0"
 gem "paper_trail", "17.0.0"
 gem "redis", "6.0.0"
 gem "sidekiq", "8.1.7"
-gem "bootsnap", "1.26.0", require: false
+gem "bootsnap", "1.26.1", require: false
 
 group :development, :test do
   gem "brakeman", "8.1.0", require: false
