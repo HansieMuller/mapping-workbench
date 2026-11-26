@@ -10,7 +10,7 @@ gem "stimulus-rails", "1.3.4"
 gem "bcrypt", "3.1.22"
 gem "roo", "3.0.0"
 gem "paper_trail", "17.0.0"
-gem "redis", "6.0.0"
+gem "redis", "6.1.0"
 gem "sidekiq", "8.1.7"
 gem "bootsnap", "1.26.0", require: false
 
