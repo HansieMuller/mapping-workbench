@@ -15,7 +15,7 @@ gem "sidekiq", "8.1.7"
 gem "bootsnap", "1.26.0", require: false
 
 group :development, :test do
-  gem "brakeman", "8.1.0", require: false
+  gem "brakeman", "8.1.1", require: false
   gem "bundler-audit", "0.9.3", require: false
   gem "rubocop-rails-omakase", "1.1.0", require: false
   gem "caxlsx", "4.5.0", require: "caxlsx"
